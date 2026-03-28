@@ -15,5 +15,14 @@
             "program": "./idleize.py", // Path to your client entry file
             "console": "integratedTerminal"
         }
+    ],
+    "compounds": [
+        {
+            "name": "Debug Both Scripts",
+            "configurations": [
+                "Launch Server",
+                "Launch Client"
+            ]
+        }
     ]
 }

@@ -41,9 +41,9 @@
                     text: 'Mining'
                 Button:
                     text: 'Copper'  
-                    on_press: root.idle()
+                    on_press: root.send('copper ore')
                 Label:
-                    text: str(root.copper)
+                    text: str(root.item_count)
         Screen:
             name: 'null'
             Label:

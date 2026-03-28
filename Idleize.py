@@ -8,48 +8,33 @@ import subprocess, sys, pickle, socket, threading
 from pathlib import Path
 
 Builder.load_file('main.kv')
-
+client_socket = None
+socket_thread = None
 class MainLayout(BoxLayout):
-    player_id = 0
-    path = Path("copper.p")
-    if path.is_file():
-        with open('copper.p', 'rb') as f:
-            copper = NumericProperty(pickle.load(f))
-    else: copper = NumericProperty(0)
-    rate = 1
-    running = False
-    def idle(self):
-        if not self.running:
-            self.running_clock = Clock.schedule_interval(self.increment,self.rate)
-            self.running = True
-        else: 
-            self.running_clock.cancel()
-            self.running = False
-    def increment(self, inc):
-        self.copper += 1
-        print(self.copper)
-    def on_stop(self):
-        self.running_clock.cancel()
-        with open('copper.p', 'wb') as f: 
-            pickle.dump(self.copper, f)
-
+    item_count = 0
+    def send(self,message):
+        client_socket.sendall(message.encode('utf-8'))
+        data = client_socket.recv(1024).decode()
+        print('Received from server: ' + data)
 class Idleize(App):
-    def communicate(self, client_socket):
+    def communicate(self):
         while True:
             pass
     def connect(self):
         HOST = '127.0.0.1'
         PORT = 1234
+        global client_socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((HOST, PORT))
-        # socket_thread = threading.Thread(target=communicate, args=(client_socket,), daemon=True)
-        # socket_thread.start()
+        socket_thread = threading.Thread(target=self.communicate, daemon=True)
+        socket_thread.start()
     def build(self):
         self.main = MainLayout()
         return self.main
-    def on_stop(self):
-        with open('copper.p', 'wb') as f:
-            pickle.dump(self.main.copper, f)
 app = Idleize()
 app.connect()
-# app.run()
+try:
+    app.run()
+except Exception as e:
+    print(e)
+    client_socket.close()
