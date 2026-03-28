@@ -1,0 +1,68 @@
+
+#:import NoTransition kivy.uix.screenmanager.NoTransition
+<MainLayout>:
+    orientation: 'horizontal'
+    
+    # Left Panel - Menu
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_x: 0.2
+        Button:
+            text: 'Character'
+            on_press: sm.current = 'Character'
+        Button:
+            text: 'Combat'
+            on_press: sm.current = 'Combat'
+        Button:
+            text: 'Mining'
+            on_press: sm.current = 'Mining'
+        Button:
+            text: 'Smelting'
+            on_press: sm.current = 'Smelting'
+        Button:
+            text: 'Crafting'
+            on_press: sm.current = 'Crafting'
+        Button:
+            text: 'Gathering'
+            on_press: sm.current = 'Gathering'
+        Button:
+            text: 'Cooking'
+            on_press: sm.current = 'Cooking'
+            
+    # Right Panel - Content Area
+    ScreenManager:
+        id: sm
+        transition: NoTransition()
+        Screen:
+            name: 'Mining'
+            GridLayout:
+                cols: 1
+                Label:
+                    text: 'Mining'
+                Button:
+                    text: 'Copper'  
+                    on_press: root.idle()  
+        Screen:
+            name: 'null'
+            Label:
+                text: 'Character'
+        Screen:
+            name: 'Combat'
+            Label:
+                text: 'Combat'
+        Screen:
+            name: 'Smelting'
+            Label:
+                text: 'Welcome to Screen 2'
+        Screen:
+            name: 'Crafting'
+            Label:
+                text: 'Welcome to Screen 1'
+        Screen:
+            name: 'Gathering'
+            Label:
+                text: 'Welcome to Screen 2'
+        Screen:
+            name: 'Cooking'
+            Label:
+                text: 'Welcome to Screen 1'
