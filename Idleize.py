@@ -7,7 +7,6 @@ from kivy.clock import Clock
 import subprocess, sys, pickle
 from pathlib import Path
 import sqlite3
-
 Builder.load_file('main.kv')
 
 try:
@@ -15,18 +14,28 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
-def create_db():
-    with open("create_db.sql", "r") as sql_file:
-        sql_script = sql_file.read()
-    cursor.executescript(sql_script)
-    connection.commit()
-    connection.close()
+# def create_db():
+#     with open("create_db.sql", "r") as sql_file:
+#         sql_script = sql_file.read()
+#     cursor.executescript(sql_script)
+#     connection.commit()
+#     connection.close()
 # create_db()
+
 # cursor.execute("INSERT INTO Item (item_name) VALUES ('copper ore');")
 # connection.commit()
 # connection.close()
 
+# cursor.execute("INSERT INTO Player (name) VALUES ('JpJab');")
+# connection.commit()
+# connection.close()
+
+# cursor.execute("INSERT INTO PlayerItem (player_id, item_id) VALUES (0,0);")
+# connection.commit()
+# connection.close()
+
 class MainLayout(BoxLayout):
+    player_id = 0
     path = Path("copper.p")
     if path.is_file():
         with open('copper.p', 'rb') as f:

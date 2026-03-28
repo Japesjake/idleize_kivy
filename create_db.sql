@@ -1,7 +1,7 @@
 CREATE TABLE Player (
     player_id INT PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
-    start_date DATE NOT NULL
+    start_date TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE Item (
