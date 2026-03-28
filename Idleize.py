@@ -4,35 +4,10 @@ from kivy.lang import Builder
 from kivy.uix.screenmanager import NoTransition
 from kivy.properties import NumericProperty
 from kivy.clock import Clock
-import subprocess, sys, pickle
+import subprocess, sys, pickle, socket, threading
 from pathlib import Path
-import sqlite3
+
 Builder.load_file('main.kv')
-
-try:
-    with sqlite3.connect('data.db') as connection:
-        cursor = connection.cursor()
-except sqlite3.Error: print('error connecting to database')
-
-# def create_db():
-#     with open("create_db.sql", "r") as sql_file:
-#         sql_script = sql_file.read()
-#     cursor.executescript(sql_script)
-#     connection.commit()
-#     connection.close()
-# create_db()
-
-# cursor.execute("INSERT INTO Item (item_name) VALUES ('copper ore');")
-# connection.commit()
-# connection.close()
-
-# cursor.execute("INSERT INTO Player (name) VALUES ('JpJab');")
-# connection.commit()
-# connection.close()
-
-# cursor.execute("INSERT INTO PlayerItem (player_id, item_id) VALUES (0,0);")
-# connection.commit()
-# connection.close()
 
 class MainLayout(BoxLayout):
     player_id = 0
@@ -59,6 +34,16 @@ class MainLayout(BoxLayout):
             pickle.dump(self.copper, f)
 
 class Idleize(App):
+    def communicate(self, client_socket):
+        while True:
+            pass
+    def connect(self):
+        HOST = '127.0.0.1'
+        PORT = 1234
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((HOST, PORT))
+        # socket_thread = threading.Thread(target=communicate, args=(client_socket,), daemon=True)
+        # socket_thread.start()
     def build(self):
         self.main = MainLayout()
         return self.main
@@ -66,4 +51,5 @@ class Idleize(App):
         with open('copper.p', 'wb') as f:
             pickle.dump(self.main.copper, f)
 app = Idleize()
-app.run()
+app.connect()
+# app.run()

@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Server",
+            "type": "python", // Or your specific environment (e.g., "python", "chrome")
+            "request": "launch",
+            "program": "/Users/jpjab/Projects/idleize_kivy/server.py", // Path to your server entry file
+            "console": "integratedTerminal" // Ensures it runs in the integrated terminal
+        },
+        {
+            "name": "Launch Client",
+            "type": "python", // Or your specific environment
+            "request": "launch",
+            "program": "./idleize.py", // Path to your client entry file
+            "console": "integratedTerminal"
+        }
+    ]
+}
