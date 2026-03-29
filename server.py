@@ -51,7 +51,7 @@ def handle_client(conn, addr):
 
 def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        host, port = '1', 1234
+        host, port = '0.0.0.0', 1234
         s.bind((host, port))
         s.listen()
         print(f"Server listening on {host}:{port}")
