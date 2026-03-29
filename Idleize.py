@@ -8,25 +8,24 @@ import subprocess, sys, pickle, socket, threading
 from pathlib import Path
 
 Builder.load_file('main.kv')
-client_socket = None
-socket_thread = None
 class MainLayout(BoxLayout):
     item_count = 0
     def send(self,message):
-        client_socket.sendall(message.encode('utf-8'))
-        data = client_socket.recv(1024).decode()
-        print('Received from server: ' + data)
+        client_socket.send(message.encode('utf-8'))
+        # Clock.
+        # data = client_socket.recv(1024).decode()
+        # print('Received from server: ' + data)
 class Idleize(App):
-    def communicate(self):
+    def handle_server(self):
         while True:
-            pass
+            data = client_socket.recv(1024).decode()
+            print(f"Received From Server {data}")
     def connect(self):
-        HOST = '127.0.0.1'
-        PORT = 1234
+        HOST, PORT = ('127.0.0.1', 1234)
         global client_socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((HOST, PORT))
-        socket_thread = threading.Thread(target=self.communicate, daemon=True)
+        socket_thread = threading.Thread(target=self.handle_server, daemon=True)
         socket_thread.start()
     def build(self):
         self.main = MainLayout()

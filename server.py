@@ -1,4 +1,4 @@
-import sqlite3, socket, threading
+import sqlite3, socket, threading, time
 
 try:
     with sqlite3.connect('data.db') as connection:
@@ -28,7 +28,7 @@ def create_db():
 cursor.execute("SELECT P.name, I.item_name FROM PlayerItem PI JOIN Player P ON P.player_id = PI.player_id JOIN Item I ON I.item_id = PI.item_id WHERE p.name = 'JpJab';")
 # cursor.execute("SELECT * FROM item")
 print(cursor.fetchall())
-
+interval = 1
 def handle_client(conn, addr):
     with conn:
         while True:
@@ -37,6 +37,7 @@ def handle_client(conn, addr):
                 break
             print(f"Received from {addr}: {message}")
             response = message
+            time.sleep(interval)
             conn.sendall(response.encode('utf-8'))
     print(f"Connection with {addr} closed")
 
@@ -59,7 +60,6 @@ def start_server():
     while True:
         conn, address = server_socket.accept()
         print(f"Connection from: {address}")
-
-    conn.close()
+    server_socket.close()
 
 if __name__ == '__main__': start_server()
