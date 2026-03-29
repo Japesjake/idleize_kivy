@@ -1,28 +1,29 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
-from kivy.uix.screenmanager import NoTransition
 from kivy.properties import NumericProperty
-from kivy.clock import Clock
-import subprocess, sys, pickle, socket, threading
-from pathlib import Path
+import socket, threading
 
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
-    item_count = 0
-    def send(self,message):
-        client_socket.send(message.encode('utf-8'))
+    copper = 0
+
+        
 class Idleize(App):
+    def send(self,msg):
+        client_socket.send(msg.encode('utf-8'))
+    def process(self, msg):
+        return msg
     def handle_server(self):
         while True:
             data = client_socket.recv(1024).decode()
             print(f"Received From Server {data}")
-            
+            self.process(data)
     def connect(self):
-        HOST, PORT = ('127.0.0.1', 1234)
+        host, port = ('172.238.207.140', 1234)
         global client_socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((HOST, PORT))
+        client_socket.connect((host, port))
         socket_thread = threading.Thread(target=self.handle_server, daemon=True)
         socket_thread.start()
     def build(self):

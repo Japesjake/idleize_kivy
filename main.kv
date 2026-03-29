@@ -41,9 +41,9 @@
                     text: 'Mining'
                 Button:
                     text: 'Copper'  
-                    on_press: root.send('copper ore')
+                    on_press: app.send('copper ore')
                 Label:
-                    text: str(root.item_count)
+                    text: str(root.copper)
         Screen:
             name: 'null'
             Label:
