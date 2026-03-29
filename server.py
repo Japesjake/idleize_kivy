@@ -29,6 +29,8 @@ cursor.execute("SELECT P.name, I.item_name FROM PlayerItem PI JOIN Player P ON P
 # cursor.execute("SELECT * FROM item")
 print(cursor.fetchall())
 interval = 1
+def send(msg, conn):
+    conn.sendall(msg.encode('utf-8'))
 def handle_client(conn, addr):
     with conn:
         while True:
@@ -37,8 +39,8 @@ def handle_client(conn, addr):
                 break
             print(f"Received from {addr}: {message}")
             response = message
-            time.sleep(interval)
-            conn.sendall(response.encode('utf-8'))
+            # time.sleep(interval)
+            send(response, conn)
     print(f"Connection with {addr} closed")
 
 def start_server():
@@ -51,15 +53,8 @@ def start_server():
             conn, addr = s.accept()
             client_thread = threading.Thread(target=handle_client, args=(conn, addr))
             client_thread.start()
-    
-    host, port = '127.0.0.1', 1234
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(1)
-    print(f"Server listening on {host}:{port}...")
-    while True:
-        conn, address = server_socket.accept()
-        print(f"Connection from: {address}")
     server_socket.close()
+
+
 
 if __name__ == '__main__': start_server()
