@@ -20,7 +20,8 @@ class Idleize(App):
             print(f"Received From Server {data}")
             self.process(data)
     def connect(self):
-        host, port = ('172.238.207.140', 1234)
+        ## 172.238.207.140
+        host, port = ('127.0.0.1', 1234)
         global client_socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((host, port))
