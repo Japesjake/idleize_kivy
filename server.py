@@ -63,8 +63,9 @@ def start_server():
             conn, addr = s.accept()
             client_thread = threading.Thread(target=handle_client, args=(conn, addr))
             client_thread.start()
-            idling_thread = threading.Thread(target=idle)
-            idling_thread.start()
+            if not idling:
+                idling_thread = threading.Thread(target=idle)
+                idling_thread.start()
 
 def idle():
     while True:
