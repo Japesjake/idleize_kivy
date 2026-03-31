@@ -33,6 +33,7 @@ interval = 1
 idling = False
 start = False
 msg = 'copper ore'
+item_id = False
 def send(msg, conn):
     conn.sendall(msg.encode('utf-8'))
 
@@ -65,6 +66,7 @@ def start_server():
 
 def idle():
     while True:
+        global idling
         if idling:
             time.sleep(1)
             process(msg)
@@ -74,7 +76,6 @@ def process(msg):
         with sqlite3.connect('data.db') as connection:
             cursor = connection.cursor()
     except sqlite3.Error: print('error connecting to database')
-    time.sleep(1)
     player_name = 'JpJab'
     sql_get_player_id = "SELECT player_id FROM Player WHERE name = ?"
     cursor.execute(sql_get_player_id, (player_name,))
@@ -82,6 +83,7 @@ def process(msg):
 
     cursor.execute("SELECT item_id FROM item WHERE item_name = ?",(msg,))
     item_id = cursor.fetchall()[0][0]
+    print(item_id)
 
     sql_update = "UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?"
     cursor.execute(sql_update, (player_id,item_id))
