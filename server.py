@@ -32,9 +32,8 @@ import sqlite3, socket, threading, time
 interval = 1
 idling = False
 start = False
-msg = 'copper ore'
 item_id = False
-def send(msg, conn):
+def send(msg):
     conn.sendall(msg.encode('utf-8'))
 
 def handle_client(conn, addr):
@@ -42,6 +41,9 @@ def handle_client(conn, addr):
         while True:
             global msg
             msg = conn.recv(1024).decode('utf-8')
+            if msg:
+                global message
+                message = msg
             if not msg:
                 break
             print(f"Received from {addr}: {msg}")
@@ -69,9 +71,11 @@ def idle():
         global idling
         if idling:
             time.sleep(1)
-            process(msg)
+            response = process(message)
+            # send(response)
 
-def process(msg):
+
+def process(message):
     try:
         with sqlite3.connect('data.db') as connection:
             cursor = connection.cursor()
@@ -80,10 +84,9 @@ def process(msg):
     sql_get_player_id = "SELECT player_id FROM Player WHERE name = ?"
     cursor.execute(sql_get_player_id, (player_name,))
     player_id = cursor.fetchall()[0][0]
-
-    cursor.execute("SELECT item_id FROM item WHERE item_name = ?",(msg,))
+    cursor.execute("SELECT item_id FROM item WHERE item_name = ?",(message,))
     item_id = cursor.fetchall()[0][0]
-    print(item_id)
+    # print(item_id)
 
     sql_update = "UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?"
     cursor.execute(sql_update, (player_id,item_id))
@@ -92,12 +95,12 @@ def process(msg):
 
     # just prints the results
     sql_select = "SELECT P.name, I.item_name, PI.count FROM PlayerItem PI JOIN Player P ON P.player_id = PI.player_id JOIN Item I ON I.item_id = PI.item_id WHERE p.name = 'JpJab' AND i.item_name = ?;"
-    cursor.execute(sql_select, (msg,))
+    cursor.execute(sql_select, (message,))
     print(cursor.fetchall())
 
     connection.commit()
     connection.close()
-    return True
+    return 'response'
 
 if __name__ == '__main__': start_server()
 
