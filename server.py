@@ -16,7 +16,6 @@ class Connection():
         self.msg = 'default message'
         self.idling = False
         self.client_thread = self.start_client_thread()
-        # self.idle_thread = self.start_idle_thread()
         self.addr_concat = self.addr[0] + ":" + str(self.addr[1])
         self.player_id = get_player_id('JpJab')
         self.s = s
@@ -27,11 +26,9 @@ class Connection():
                 if self.msg:
                     print(f"Received from {addr}: {self.msg}")
                     self.msg = json.loads(self.msg)
-                    # print('json?', type(self.msg))
                     q.put(self.msg)
     def start_client_thread(self):
         client_thread = threading.Thread(target=self.client_thread_func, args=(self.conn, self.addr, msg_queue))
-        # self.set_address('JpJab')
         client_thread.start()
         return client_thread
     def set_address(self, player_name):
@@ -45,7 +42,7 @@ class Server():
         self.idle_threads = []
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1234)
+            host, port = ('0.0.0.0', 1235)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
@@ -67,14 +64,16 @@ class Idle_thread():
             msg = msg_queue.get()
             self.idling = msg[2]
             while self.idling:
+                print('idling...')
                 time.sleep(1)
-                    ###########
-                # print(msg[0])
+                ###########
                 self.process(msg)
                 ############
+                if not msg_queue.empty():
+                    msg = msg_queue.get()
+                    self.idling = msg[2]
     def start(self):
         idle_thread = threading.Thread(target=self.idle_loop)
-        # self.idle_threads.append(idle_thread)
         idle_thread.start()
         return idle_thread
     def process(self,msg):
@@ -85,9 +84,7 @@ class Idle_thread():
             db_connection.commit()
             cursor.execute('SELECT count FROM PlayerItem')
             count = cursor.fetchall()
-            # print('counts: ', count)
-            # response = (item_id, count)
-            # self.s.send(json.dumps(response).encode('utf-8'))
+            print(count)
     def get_item_id(self, msg):
         with sqlite3.connect('data.db') as db_connection:
             cursor = db_connection.cursor()
