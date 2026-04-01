@@ -4,7 +4,7 @@ class Connection():
     def __init__(self, conn, addr):
         self.conn = conn
         self.addr = addr
-        self.thread = None
+        self.client_thread = None
         self.msg = 'default message'
         self.msg_queue = queue.Queue()
     def client_thread(self, conn, addr, q):
@@ -14,14 +14,20 @@ class Connection():
                 print(f"Received from {addr}: {self.msg}")
                 q.put(self.msg)
     def start_client_thread(self):
-        self.thread = threading.Thread(target=self.client_thread, args=(self.conn, self.addr, self.msg_queue))
-        self.thread.start()
+        self.client_thread = threading.Thread(target=self.client_thread, args=(self.conn, self.addr, self.msg_queue))
+        self.client_thread.start()
     def get_msg(self):
         return self.msg_queue
+    def idle(self):
+        while True:
+            print(self.msg_queue)
+    def start_idle_thread(self):
+        pass
 class Server():
     def __init__(self):
         self.connections = []
-        self.client_threads = []
+        self.idle_threads = []
+        self.idling = True
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             host, port = ('0.0.0.0', 1234)
@@ -33,7 +39,7 @@ class Server():
                 connection = Connection(conn, addr)
                 self.connections.append(connection)
                 connection.start_client_thread()
-            
+
             
 if True:
     def send(msg):
