@@ -1,7 +1,9 @@
-# try:
-#     with sqlite3.connect('data.db') as connection:
-#         cursor = connection.cursor()
-# except sqlite3.Error: print('error connecting to database')
+import sqlite3
+
+try:
+    with sqlite3.connect('data.db') as connection:
+        cursor = connection.cursor()
+except sqlite3.Error: print('error connecting to database')
 
 # def create_db():
 #     with open("create_db.sql", "r") as sql_file:
@@ -27,3 +29,8 @@
 # cursor.execute("SELECT * FROM item")
 # print(cursor.fetchall())
 # connection.close()
+
+cursor.execute('ALTER TABLE Player ADD COLUMN address VARCHAR(20)')
+connection.commit()
+connection.close()
+

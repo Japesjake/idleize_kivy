@@ -11,44 +11,53 @@ class Connection():
         with conn:
             while True:
                 self.msg = conn.recv(1024).decode('utf-8')
-                print(f"Received from {addr}: {self.msg}")
-                q.put(self.msg)
+                if self.msg:
+                    print(f"Received from {addr}: {self.msg}")
+                    q.put(self.msg)
     def start_client_thread(self):
         self.thread = threading.Thread(target=self.client_thread, args=(self.conn, self.addr, self.msg_queue))
+        self.set_address('JpJab')
         self.thread.start()
-    def get_msg(self):
-        return self.msg_queue
+    def set_address(self, player_name):
+        with sqlite3.connect('data.db') as db_connection:
+            cursor = db_connection.cursor()
+        self.concatenated_address = self.addr[0] + ":" + str(self.addr[1])
+        print(self.concatenated_address)
+        cursor.execute('UPDATE Player SET address = ? WHERE name = ?', (self.concatenated_address,player_name))
+        db_connection.commit()
+        db_connection.close()
 class Server():
     def __init__(self):
         self.connections = []
-        self.client_threads = []
+        self.idle_threads = []
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             host, port = ('0.0.0.0', 1234)
             s.bind((host, port))
             s.listen()
-            print(f"Server listening on {host}:{port}")        
+            print(f"Server listening on {host}:{port}")
             while True:
                 conn, addr = s.accept()
                 connection = Connection(conn, addr)
                 self.connections.append(connection)
                 connection.start_client_thread()
-            
-            
-if True:
-    def send(msg):
-        conn.sendall(msg.encode('utf-8'))
 
-    def idle():
+                idle_thread = threading.Thread(target=self.idle_thread)
+                self.idle_threads.append(idle_thread)
+                idle_thread.start()
+    def idle_thread(self):
         while True:
-            global idling
-            if idling:
-                time.sleep(1)
-                response = process(message)
-                send(response)
+            time.sleep(1)
+            for connection in self.connections:
+                msg = connection.msg_queue.get()
+                if msg:
+                    # self.process(msg, addr)
+                    pass
+    def process(self):
+        with sqlite3.connect('data.db') as db_connection:
+            cursor = db_connection.cursor()
 
-
-def process(message):
+def processes(message):
     try:
         with sqlite3.connect('data.db') as db_connection:
             cursor = db_connection.cursor()
