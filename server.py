@@ -52,10 +52,8 @@ class Server():
                 connection = Connection(self.conn, self.addr, s)
                 self.connections.append(connection)
                 self.conn.sendall('test'.encode('utf-8'))
-                if self.idle_threads:
-                    booleans = [True for idle_thread in self.idle_threads if idle_thread.player_id == connection.player_id]
-                    if not any(booleans): self.create_idle_thread()
-                else: self.create_idle_thread()
+                booleans = [True if idle_thread.player_id == connection.player_id else False for idle_thread in self.idle_threads]
+                if not any(booleans): self.create_idle_thread()
                     
     def create_idle_thread(self):
         idle_thread = Idle_thread()
