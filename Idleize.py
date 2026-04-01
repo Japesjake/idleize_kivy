@@ -2,11 +2,13 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.properties import NumericProperty
-import socket, threading, json
+import socket, threading, json, queue
 
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
     copper = 0
+
+q = queue.Queue()
 
 class Idleize(App):
     player_name = 'JpJab'
@@ -16,19 +18,23 @@ class Idleize(App):
         else: self.idling = False
         msg = (msg, self.player_name, self.idling)
         msg = json.dumps(msg)
-        client_socket.send(msg.encode('utf-8'))
+        self.client_socket.send(msg.encode('utf-8'))
     def process(self, msg):
-        return msg
+        if msg == 'true': msg = True
+        elif msg == 'false': msg = False
+        self.idling = msg
     def receiver(self):
         while True:
-            msg = client_socket.recv(1024).decode()
+            msg = self.client_socket.recv(1024).decode()
             print(f"Received From Server {msg}")
+            print('type of message is: ', type(msg))
+            # q.put(msg)
+            self.process(msg)
     def connect(self):
         ## 172.238.207.140
-        host, port = ('127.0.0.1', 1235)
-        global client_socket
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((host, port))
+        host, port = ('127.0.0.1', 1234)
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((host, port))
         # client_socket.listen()
         socket_thread = threading.Thread(target=self.receiver, daemon=True)
         socket_thread.start()

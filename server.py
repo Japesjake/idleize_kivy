@@ -1,7 +1,8 @@
 import sqlite3, socket, threading, time, queue, json
 
 msg_queue = queue.Queue()
-
+connections = []
+idle_threads = []
 def get_player_id(player_name):
     with sqlite3.connect('data.db') as db_connection:
         cursor = db_connection.cursor()
@@ -38,11 +39,11 @@ class Connection():
             db_connection.commit()
 class Server():
     def __init__(self):
-        self.connections = []
-        self.idle_threads = []
+        self.conn = None
+        self.addr = None
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1235)
+            host, port = ('0.0.0.0', 1234)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
@@ -50,14 +51,16 @@ class Server():
                 self.conn, self.addr = s.accept()
                 print("connection from: ", self.addr)
                 connection = Connection(self.conn, self.addr, s)
-                self.connections.append(connection)
-                self.conn.sendall('test'.encode('utf-8'))
-                booleans = [True if idle_thread.player_id == connection.player_id else False for idle_thread in self.idle_threads]
+                connections.append(connection)
+                booleans = [idle_thread.player_id == connection.player_id for idle_thread in idle_threads]
                 if not any(booleans): self.create_idle_thread()
-                    
+                for idle_thread in idle_threads:
+                    for connection in connections:
+                        if idle_thread.player_id == connection.player_id:
+                            self.conn.sendall(str(idle_thread.idling).encode('utf-8'))
     def create_idle_thread(self):
         idle_thread = Idle_thread()
-        self.idle_threads.append(idle_thread)
+        idle_threads.append(idle_thread)
         idle_thread.start()
         print('thread created')
 class Idle_thread():
@@ -77,6 +80,7 @@ class Idle_thread():
                 if not msg_queue.empty():
                     msg = msg_queue.get()
                     self.idling = msg[2]
+                
     def start(self):
         idle_thread = threading.Thread(target=self.idle_loop)
         idle_thread.start()
