@@ -53,21 +53,15 @@ class Server():
                 self.connections.append(connection)
                 self.conn.sendall('test'.encode('utf-8'))
                 if self.idle_threads:
-                    for idle_thread in self.idle_threads:
-                        booleans = []
-                        if idle_thread.player_id == connection.player_id:
-                            booleans.append(True)
-                        print(any(booleans))
-                        if not any(booleans):
-                            idle_thread = Idle_thread()
-                            self.idle_threads.append(idle_thread)
-                            idle_thread.start()
-                            print('thread created')
-                else: 
-                    idle_thread = Idle_thread()
-                    self.idle_threads.append(idle_thread)
-                    idle_thread.start()
-                    print('thread created')
+                    booleans = [True for idle_thread in self.idle_threads if idle_thread.player_id == connection.player_id]
+                    if not any(booleans): self.create_idle_thread()
+                else: self.create_idle_thread()
+                    
+    def create_idle_thread(self):
+        idle_thread = Idle_thread()
+        self.idle_threads.append(idle_thread)
+        idle_thread.start()
+        print('thread created')
 class Idle_thread():
     def __init__(self):
         self.player_id = get_player_id('JpJab')

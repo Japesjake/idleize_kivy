@@ -21,8 +21,8 @@ class Idleize(App):
         return msg
     def receiver(self):
         while True:
-            data = client_socket.recv(1024).decode()
-            print(f"Received From Server {data}")
+            msg = client_socket.recv(1024).decode()
+            print(f"Received From Server {msg}")
     def connect(self):
         ## 172.238.207.140
         host, port = ('127.0.0.1', 1235)
