@@ -29,8 +29,9 @@ class Connection():
         with sqlite3.connect('data.db') as db_connection:
             cursor = db_connection.cursor()
             cursor.execute('SELECT player_id FROM Player WHERE name = ?;',(player_name,))
-            self.player_id = cursor.fetchall()
+            self.player_id = cursor.fetchall()[0][0]
             print(self.player_id)
+            return self.player_id
 
 class Server():
     def __init__(self):
@@ -67,13 +68,11 @@ class Server():
             return item_id
     def process(self, msg, addr_concat, connection):
         with sqlite3.connect('data.db') as db_connection:
-            self.item_id = self.get_item_id(msg)
+            item_id = self.get_item_id(msg)
             cursor = db_connection.cursor()
-            cursor.execute('UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?;',(connection.player_id, self.item_id))
+            cursor.execute('UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?;',(connection.player_id, item_id))
             db_connection.commit()
             cursor.execute('SELECT count FROM PlayerItem')
-
-            print(connection.player_id)
 
 server = Server()
 if __name__ == '__main__': server.run()
