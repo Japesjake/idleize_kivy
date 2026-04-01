@@ -13,17 +13,18 @@ class Idleize(App):
         client_socket.send(msg.encode('utf-8'))
     def process(self, msg):
         return msg
-    def listen(self):
+    def receiver(self):
         while True:
+            print('listening...')
             data = client_socket.recv(1024).decode()
             print(f"Received From Server {data}")
     def connect(self):
         ## 172.238.207.140
-        host, port = ('127.0.0.1', 1235)
+        host, port = ('127.0.0.1', 1234)
         global client_socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((host, port))
-        socket_thread = threading.Thread(target=self.listen, daemon=True)
+        socket_thread = threading.Thread(target=self.receiver, daemon=True)
         socket_thread.start()
     def build(self):
         self.main = MainLayout()

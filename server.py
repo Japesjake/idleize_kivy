@@ -1,7 +1,7 @@
-import sqlite3, socket, threading, time, queue
+import sqlite3, socket, threading, time, queue, json
 
 class Connection():
-    def __init__(self, conn, addr):
+    def __init__(self, conn, addr, s):
         self.conn = conn
         self.addr = addr
         self.msg = 'default message'
@@ -11,6 +11,7 @@ class Connection():
         self.idle_thread = self.start_idle_thread()
         self.addr_concat = self.addr[0] + ":" + str(self.addr[1])
         self.player_id = self.get_player_id('JpJab')
+        self.s = s
     def client_thread_func(self, conn, addr, q):
         with conn:
             while True:
@@ -62,8 +63,10 @@ class Connection():
             cursor.execute('UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?;',(self.player_id, item_id))
             db_connection.commit()
             cursor.execute('SELECT count FROM PlayerItem')
-            counts = cursor.fetchall()
-            print('counts: ', counts)
+            count = cursor.fetchall()
+            print('counts: ', count)
+            response = (item_id, count)
+            # self.s.send(json.dumps(response).encode('utf-8'))
 
 class Server():
     def __init__(self):
@@ -71,16 +74,16 @@ class Server():
         self.idle_threads = []
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1235)
+            host, port = ('0.0.0.0', 1234)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
             while True:
                 self.conn, self.addr = s.accept()
                 print("connection from: ", self.addr)
-                self.addr_concat = self.addr[0] + ":" + str(self.addr[1])
-                connection = Connection(self.conn, self.addr)
+                connection = Connection(self.conn, self.addr, s)
                 self.connections.append(connection)
+                self.conn.sendall('test'.encode('utf-8'))
 
 
 server = Server()
