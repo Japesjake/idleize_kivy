@@ -123,7 +123,7 @@ class Idle_thread():
             for connection in connections:
                 if connection.conn.fileno() != -1:
                     if connection.player_id == self.player_id:
-                        print('sent_message on connection:', connection.conn)
+                        print('sent_message to client')
                         send_message(self, connection)
 
     def get_item_id(self, name):
