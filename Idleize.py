@@ -29,8 +29,8 @@ class Idleize(App):
     def process(self):
         msg = q.get()
         if not self.initial:
-            if msg[2] == 'True': self.idling = True
-            elif msg[2] == 'False': self.idling = False
+            if self.initial == 'True': self.idling = True
+            elif self.initial == 'False': self.idling = False
         self.initial = False
         print('!!!!!', msg)
         data[msg[0]] = msg[3][0][0]
@@ -44,8 +44,8 @@ class Idleize(App):
             self.process()
     def connect(self):
         ## 172.238.207.140
-        host, port = ('172.238.207.140', 1234)
-        # host, port = ('127.0.0.1', 1235)
+        # host, port = ('172.238.207.140', 1234)
+        host, port = ('127.0.0.1', 1234)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
         socket_thread = threading.Thread(target=self.receiver, daemon=True)
