@@ -1,5 +1,7 @@
 import sqlite3, socket, threading, time, queue, json
 
+##### msg = ["copper ore", "JpJab", true, count]
+
 msg_queue = queue.Queue()
 connections = []
 idle_threads = []
@@ -9,6 +11,12 @@ def get_player_id(player_name):
         cursor.execute('SELECT player_id FROM Player WHERE name = ?;',(player_name,))
         player_id = cursor.fetchall()[0][0]
         return player_id
+def get_item_count(item_id):
+    with sqlite3.connect('data.db') as db_connection:
+        cursor = db_connection.cursor()
+        cursor.execute('SELECT count FROM PlayerItem WHERE item_id = ?;',(item_id,))
+        item_count = cursor.fetchall()[0][0]
+        return item_count
 
 class Connection():
     def __init__(self, conn, addr, s):
@@ -18,7 +26,8 @@ class Connection():
         self.idling = False
         self.client_thread = self.start_client_thread()
         self.addr_concat = self.addr[0] + ":" + str(self.addr[1])
-        self.player_id = get_player_id('JpJab')
+        self.player_name = 'JpJab'
+        self.player_id = get_player_id(self.player_name)
         self.s = s
     def client_thread_func(self, conn, addr, q):
         with conn:
@@ -26,6 +35,9 @@ class Connection():
                 self.msg = conn.recv(1024).decode('utf-8')
                 if self.msg:
                     print(f"Received from {addr}: {self.msg}")
+                    #####
+                    # if self.msg == 'true': self.msg == True
+                    # else: self.msg == False
                     self.msg = json.loads(self.msg)
                     q.put(self.msg)
     def start_client_thread(self):
@@ -40,11 +52,11 @@ class Connection():
 class Server():
     def __init__(self):
         self.conn = None
-        self.addr = None 
+        self.addr = None
         
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1234)
+            host, port = ('0.0.0.0', 1235)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
@@ -58,7 +70,8 @@ class Server():
                 for idle_thread in idle_threads:
                     for connection in connections:
                         if idle_thread.player_id == connection.player_id:
-                            msg = str(idle_thread.idling).encode('utf-8')
+                            ######### add functionality where it sends to each particular connection instead of all
+                            msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count)).encode('utf-8')
                             self.conn.sendall(msg)
                             print("sent message to client: ", msg)
     def create_idle_thread(self):
@@ -70,6 +83,9 @@ class Idle_thread():
     def __init__(self):
         self.player_id = get_player_id('JpJab')
         self.idling = False
+        self.item_id = 'item_id'
+        self.item_name = 'item_name'
+        self.item_count = 'item_count'
     def idle_loop(self):
         while True:
             msg = msg_queue.get()
@@ -90,17 +106,19 @@ class Idle_thread():
         return idle_thread
     def process(self,msg):
         with sqlite3.connect('data.db') as db_connection:
-            item_id = self.get_item_id(msg)
+            self.item_name= msg[0]
+            self.item_id = self.get_item_id(self.item_name)
+            self.item_count = get_item_count(self.item_id)
             cursor = db_connection.cursor()
-            cursor.execute('UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?;',(self.player_id, item_id))
+            cursor.execute('UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?;',(self.player_id, self.item_id))
             db_connection.commit()
-            cursor.execute('SELECT count FROM PlayerItem')
-            count = cursor.fetchall()
-            print(count)
-    def get_item_id(self, msg):
+            cursor.execute('SELECT count FROM PlayerItem WHERE item_id = ?;',(self.item_id,))
+            self.item_count = cursor.fetchall()
+            print(self.item_count)
+    def get_item_id(self, name):
         with sqlite3.connect('data.db') as db_connection:
             cursor = db_connection.cursor()
-            cursor.execute('SELECT item_id FROM item WHERE item_name = ?',(msg[0],))     
+            cursor.execute('SELECT item_id FROM item WHERE item_name = ?',(name,))     
             item_id = cursor.fetchall()[0][0]
             return item_id
     
