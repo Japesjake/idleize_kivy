@@ -17,6 +17,11 @@ def get_item_count(item_id):
         cursor.execute('SELECT count FROM PlayerItem WHERE item_id = ?;',(item_id,))
         item_count = cursor.fetchall()[0][0]
         return item_count
+    
+def send_message(idle_thread, connection):
+    msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count)).encode('utf-8')
+    connection.conn.sendall(msg)
+    print("sent message to client: ", msg)
 
 class Connection():
     def __init__(self, conn, addr, s):
@@ -35,9 +40,6 @@ class Connection():
                 self.msg = conn.recv(1024).decode('utf-8')
                 if self.msg:
                     print(f"Received from {addr}: {self.msg}")
-                    #####
-                    # if self.msg == 'true': self.msg == True
-                    # else: self.msg == False
                     self.msg = json.loads(self.msg)
                     q.put(self.msg)
     def start_client_thread(self):
@@ -51,12 +53,10 @@ class Connection():
             db_connection.commit()
 class Server():
     def __init__(self):
-        self.conn = None
-        self.addr = None
-        
+        pass
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1235)
+            host, port = ('0.0.0.0', 1234)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
@@ -67,13 +67,16 @@ class Server():
                 connections.append(connection)
                 booleans = [idle_thread.player_id == connection.player_id for idle_thread in idle_threads]
                 if not any(booleans): self.create_idle_thread()
+
+                ##### initial message #####
                 for idle_thread in idle_threads:
                     for connection in connections:
                         if idle_thread.player_id == connection.player_id:
                             ######### add functionality where it sends to each particular connection instead of all
-                            msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count)).encode('utf-8')
-                            self.conn.sendall(msg)
-                            print("sent message to client: ", msg)
+                            send_message(idle_thread, connection)
+            for connection in connections:
+                if not connection.conn:
+                    s.close()
     def create_idle_thread(self):
         idle_thread = Idle_thread()
         idle_threads.append(idle_thread)
@@ -106,7 +109,7 @@ class Idle_thread():
         return idle_thread
     def process(self,msg):
         with sqlite3.connect('data.db') as db_connection:
-            self.item_name= msg[0]
+            self.item_name = msg[0]
             self.item_id = self.get_item_id(self.item_name)
             self.item_count = get_item_count(self.item_id)
             cursor = db_connection.cursor()
@@ -115,6 +118,13 @@ class Idle_thread():
             cursor.execute('SELECT count FROM PlayerItem WHERE item_id = ?;',(self.item_id,))
             self.item_count = cursor.fetchall()
             print(self.item_count)
+            ######
+            for connection in connections:
+                if connection.conn.fileno() != -1:
+                    if connection.player_id == self.player_id:
+                        print('sent_message on connection:', connection.conn)
+                        send_message(self, connection)
+
     def get_item_id(self, name):
         with sqlite3.connect('data.db') as db_connection:
             cursor = db_connection.cursor()

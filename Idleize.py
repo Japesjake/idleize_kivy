@@ -13,6 +13,7 @@ q = queue.Queue()
 class Idleize(App):
     player_name = 'JpJab'
     idling = False
+    initial = True
     def send(self,msg):
         if self.idling == False: self.idling = True
         else: self.idling = False
@@ -22,21 +23,22 @@ class Idleize(App):
         print('sent message to server: ', msg, 'of type: ', type(msg))
     def process(self, msg):
         print('processing ', msg, 'as type: ', type(msg))
-        if msg[2] == 'True': msg = True
-        elif msg[2] == 'False': msg = False
-        self.idling = msg
+        if not self.initial:
+            if msg[2] == 'True': msg = True
+            elif msg[2] == 'False': msg = False
+            self.idling = msg
+        self.initial = False
     def receiver(self):
         while True:
             msg = json.loads(self.client_socket.recv(1024).decode())
-            print(f"Received From Server {msg} of type: type(msg)")
+            print(f"Received From Server {msg}")
             # q.put(msg)
             self.process(msg)
     def connect(self):
         ## 172.238.207.140
-        host, port = ('127.0.0.1', 1235)
+        host, port = ('127.0.0.1', 1234)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
-        # client_socket.listen()
         socket_thread = threading.Thread(target=self.receiver, daemon=True)
         socket_thread.start()
     def build(self):
