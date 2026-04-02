@@ -18,16 +18,18 @@ class Idleize(App):
         else: self.idling = False
         msg = (msg, self.player_name, self.idling)
         msg = json.dumps(msg)
-        self.client_socket.send(msg.encode('utf-8'))
+        self.client_socket.sendall(msg.encode('utf-8'))
+        print('sent message to server: ', msg)
     def process(self, msg):
-        if msg == 'true': msg = True
-        elif msg == 'false': msg = False
+        if msg == 'True': msg = True
+        elif msg == 'False': msg = False
         self.idling = msg
+        print(type(self.idling))
+        print(self.idling)
     def receiver(self):
         while True:
             msg = self.client_socket.recv(1024).decode()
             print(f"Received From Server {msg}")
-            print('type of message is: ', type(msg))
             # q.put(msg)
             self.process(msg)
     def connect(self):

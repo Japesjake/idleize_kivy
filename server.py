@@ -40,7 +40,8 @@ class Connection():
 class Server():
     def __init__(self):
         self.conn = None
-        self.addr = None
+        self.addr = None 
+        
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             host, port = ('0.0.0.0', 1234)
@@ -57,7 +58,9 @@ class Server():
                 for idle_thread in idle_threads:
                     for connection in connections:
                         if idle_thread.player_id == connection.player_id:
-                            self.conn.sendall(str(idle_thread.idling).encode('utf-8'))
+                            msg = str(idle_thread.idling).encode('utf-8')
+                            self.conn.sendall(msg)
+                            print("sent message to client: ", msg)
     def create_idle_thread(self):
         idle_thread = Idle_thread()
         idle_threads.append(idle_thread)
