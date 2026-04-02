@@ -4,12 +4,13 @@ from kivy.lang import Builder
 from kivy.properties import NumericProperty
 import socket, threading, json, queue
 
-data = {'copper ore':1}
-
+# host, port = ('172.238.207.140', 1234)
+host, port = ('127.0.0.1', 1235)
+data = []
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
-    data = data
-    print(data)
+    # copper_ore = NumericProperty(0)
+    pass
 
 ##### msg = ["copper ore", "JpJab", true, count]
 
@@ -19,6 +20,7 @@ class Idleize(App):
     player_name = 'JpJab'
     idling = False
     initial = True
+    copper_ore = NumericProperty(0)
     def send(self,msg):
         if self.idling == False: self.idling = True
         else: self.idling = False
@@ -28,13 +30,17 @@ class Idleize(App):
         print('sent message to server: ', msg, 'of type: ', type(msg))
     def process(self):
         msg = q.get()
-        if not self.initial:
+        print(msg[1])
+        if msg[1] == 'initial':
+            data = msg[0]
+            for row in data:
+                print(row)
+        if not self.initial and msg[1] != 'initial':
             if self.initial == 'True': self.idling = True
             elif self.initial == 'False': self.idling = False
+            self.copper_ore = msg[3][0][0]
         self.initial = False
-        print('!!!!!', msg)
-        data[msg[0]] = msg[3][0][0]
-        print(type(data[msg[0]]))
+
 
     def receiver(self):
         while True:
@@ -45,7 +51,7 @@ class Idleize(App):
     def connect(self):
         ## 172.238.207.140
         # host, port = ('172.238.207.140', 1234)
-        host, port = ('127.0.0.1', 1234)
+        # host, port = ('127.0.0.1', 1234)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
         socket_thread = threading.Thread(target=self.receiver, daemon=True)

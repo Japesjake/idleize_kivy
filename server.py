@@ -5,6 +5,13 @@ import sqlite3, socket, threading, time, queue, json
 msg_queue = queue.Queue()
 connections = []
 idle_threads = []
+host, port = ('0.0.0.0', 1235)
+def get_all_items(player_id):
+    with sqlite3.connect('data.db') as db_connection:
+        cursor = db_connection.cursor()
+    cursor.execute('SELECT Player.name, Item.item_name, PlayerItem.count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.player_id = ?',(player_id,))
+    data = cursor.fetchall()
+    return data
 def get_player_id(player_name):
     with sqlite3.connect('data.db') as db_connection:
         cursor = db_connection.cursor()
@@ -19,10 +26,16 @@ def get_item_count(item_id):
         item_count = cursor.fetchall()[0][0]
         return item_count
     
-def send_message(idle_thread, connection):
-    msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count)).encode('utf-8')
-    connection.conn.sendall(msg)
-    print("sent message to client: ", msg)
+def send_message(idle_thread, connection, initial_data = False):
+    if initial_data:
+        data = json.dumps((initial_data, 'initial'))
+        connection.conn.sendall(data.encode('utf-8'))
+        print('initial data sent')
+    else:
+        msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count))
+        connection.conn.sendall(msg.encode('utf-8'))
+        print("sent message to client: ", msg)
+        return msg
 
 class Connection():
     def __init__(self, conn, addr, s):
@@ -57,7 +70,7 @@ class Server():
         pass
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            host, port = ('0.0.0.0', 1234)
+            # host, port = ('0.0.0.0', 1234)
             s.bind((host, port))
             s.listen()
             print(f"Server listening on {host}:{port}")
@@ -73,8 +86,11 @@ class Server():
                 for idle_thread in idle_threads:
                     for connection in connections:
                         if idle_thread.player_id == connection.player_id:
-                            ######### add functionality where it sends to each particular connection instead of all
-                            send_message(idle_thread, connection)
+                            data = get_all_items(idle_thread.player_id)
+                            msg = send_message(idle_thread, connection)
+                            send_message(idle_thread, connection, data)
+
+            ### might need to comment out this part to fix connection refused error
             for connection in connections:
                 if not connection.conn:
                     s.close()
@@ -123,7 +139,6 @@ class Idle_thread():
             for connection in connections:
                 if connection.conn.fileno() != -1:
                     if connection.player_id == self.player_id:
-                        print('sent_message to client')
                         send_message(self, connection)
 
     def get_item_id(self, name):
