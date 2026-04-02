@@ -4,9 +4,14 @@ from kivy.lang import Builder
 from kivy.properties import NumericProperty
 import socket, threading, json, queue
 
+data = {'copper ore':1}
+
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
-    copper = 0
+    data = data
+    print(data)
+
+##### msg = ["copper ore", "JpJab", true, count]
 
 q = queue.Queue()
 
@@ -21,19 +26,21 @@ class Idleize(App):
         msg = json.dumps(msg)
         self.client_socket.sendall(msg.encode('utf-8'))
         print('sent message to server: ', msg, 'of type: ', type(msg))
-    def process(self, msg):
-        print('processing ', msg, 'as type: ', type(msg))
+    def process(self):
+        msg = q.get()
         if not self.initial:
-            if msg[2] == 'True': msg = True
-            elif msg[2] == 'False': msg = False
-            self.idling = msg
+            if msg[2] == 'True': self.idling = True
+            elif msg[2] == 'False': self.idling = False
         self.initial = False
+        data[msg[0]] = msg[3][0][0]
+        print(type(data[msg[0]]))
+
     def receiver(self):
         while True:
             msg = json.loads(self.client_socket.recv(1024).decode())
             print(f"Received From Server {msg}")
-            # q.put(msg)
-            self.process(msg)
+            q.put(msg)
+            self.process()
     def connect(self):
         ## 172.238.207.140
         host, port = ('127.0.0.1', 1234)
@@ -50,4 +57,3 @@ try:
     app.run()
 except Exception as e:
     print(e)
-    client_socket.close()

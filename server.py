@@ -11,6 +11,7 @@ def get_player_id(player_name):
         cursor.execute('SELECT player_id FROM Player WHERE name = ?;',(player_name,))
         player_id = cursor.fetchall()[0][0]
         return player_id
+
 def get_item_count(item_id):
     with sqlite3.connect('data.db') as db_connection:
         cursor = db_connection.cursor()
