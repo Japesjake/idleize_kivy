@@ -4,10 +4,14 @@ from kivy.lang import Builder
 from kivy.properties import NumericProperty
 import socket, threading, json, queue
 
+# data received initial= [('JpJab', 'iron ore', 0), ('JpJab', 'copper ore', 73377)]
+
 # host, port = ('172.238.207.140', 1234)
-host, port = ('127.0.0.1', 1234)
-data = []
+host, port = ('127.0.0.1', 1235)
+data = {}
 Builder.load_file('main.kv')
+# items = {'copper_ore': 0, 'iron_ore': 0}
+# counts = []
 class MainLayout(BoxLayout):
     # copper_ore = NumericProperty(0)
     pass
@@ -15,7 +19,7 @@ class MainLayout(BoxLayout):
 ##### msg = ["copper ore", "JpJab", true, count]
 #message sent to client:  [[["JpJab", "iron ore", 0], ["JpJab", "copper ore", 72060]], "initial"]
 q = queue.Queue()
-def get_count(item_name, msg):
+def get_count(item_name):
     for row in data:
         if row[1] == item_name:
             return row[2]
@@ -37,7 +41,8 @@ class Idleize(App):
         msg = q.get()
         if msg[1] == 'initial':
             data = msg[0]
-            # get_count()
+            # for item in items:
+            #     get_count(item)
         else:
             if msg[2] == 'True': self.idling = True
             elif msg[2] == 'False': self.idling = False
