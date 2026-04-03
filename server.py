@@ -5,7 +5,7 @@ import sqlite3, socket, threading, time, queue, json
 msg_queue = queue.Queue()
 connections = []
 idle_threads = []
-host, port = ('0.0.0.0', 1235)
+host, port = ('0.0.0.0', 1234)
 def get_all_items(player_id):
     with sqlite3.connect('data.db') as db_connection:
         cursor = db_connection.cursor()
@@ -28,14 +28,11 @@ def get_item_count(item_id):
     
 def send_message(idle_thread, connection, initial_data = False):
     if initial_data:
-        data = json.dumps((initial_data, 'initial'))
-        connection.conn.sendall(data.encode('utf-8'))
-        print('initial data sent')
+        msg = json.dumps((initial_data, 'initial'))
     else:
         msg = json.dumps((idle_thread.item_name, connection.player_name, str(idle_thread.idling), idle_thread.item_count))
-        connection.conn.sendall(msg.encode('utf-8'))
-        print("sent message to client: ", msg)
-        return msg
+    connection.conn.sendall(msg.encode('utf-8'))
+    print('message sent to client: ', msg)
 
 class Connection():
     def __init__(self, conn, addr, s):
@@ -110,15 +107,17 @@ class Idle_thread():
         while True:
             msg = msg_queue.get()
             self.idling = msg[2]
-            while self.idling:
+            while True:
                 print('idling...')
                 time.sleep(1)
-                ###########
-                self.process(msg)
-                ############
                 if not msg_queue.empty():
                     msg = msg_queue.get()
                     self.idling = msg[2]
+                if self.idling == False:
+                    break
+                ###########
+                self.process(msg)
+                ############
                 
     def start(self):
         idle_thread = threading.Thread(target=self.idle_loop)
