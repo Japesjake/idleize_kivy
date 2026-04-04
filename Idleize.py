@@ -7,17 +7,14 @@ import socket, threading, json, queue
 # data received initial= [('JpJab', 'iron ore', 0), ('JpJab', 'copper ore', 73377)]
 
 # host, port = ('172.238.207.140', 1234)
-host, port = ('127.0.0.1', 1235)
-data = {}
+host, port = ('127.0.0.1', 1234)
 Builder.load_file('main.kv')
-# items = {'copper_ore': 0, 'iron_ore': 0}
-# counts = []
 class MainLayout(BoxLayout):
     # copper_ore = NumericProperty(0)
     pass
 
 ##### msg = ["copper ore", "JpJab", true, count]
-#message sent to client:  [[["JpJab", "iron ore", 0], ["JpJab", "copper ore", 72060]], "initial"]
+#message received from server:  [[["JpJab", "iron ore", 0], ["JpJab", "copper ore", 72060]], "initial"]
 q = queue.Queue()
 def get_count(item_name):
     for row in data:
@@ -28,8 +25,8 @@ def get_count(item_name):
 class Idleize(App):
     player_name = 'JpJab'
     idling = False
-    initial = True
     copper_ore = NumericProperty(0)
+    data = {}
     def send(self,msg):
         if self.idling == False: self.idling = True
         else: self.idling = False
@@ -40,14 +37,11 @@ class Idleize(App):
     def process(self):
         msg = q.get()
         if msg[1] == 'initial':
-            data = msg[0]
-            # for item in items:
-            #     get_count(item)
+            self.data = msg[0]
         else:
             if msg[2] == 'True': self.idling = True
             elif msg[2] == 'False': self.idling = False
-        # self.copper_ore = msg[3][0][0]
-        # self.initial = False
+            self.data[msg[0]] = msg[3]
 
 
     def receiver(self):

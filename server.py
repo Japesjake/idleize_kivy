@@ -5,7 +5,7 @@ import sqlite3, socket, threading, time, queue, json
 msg_queue = queue.Queue()
 connections = []
 idle_threads = []
-host, port = ('0.0.0.0', 1235)
+host, port = ('0.0.0.0', 1234)
 def get_all_items(player_id):
     with sqlite3.connect('data.db') as db_connection:
         cursor = db_connection.cursor()
@@ -85,8 +85,8 @@ class Server():
                         if idle_thread.player_id == connection.player_id:
                             all_items = get_all_items(idle_thread.player_id)
                             data = {}
-                            for row in data:
-                                data[all_items[1]] = all_items[2]
+                            for row in all_items:
+                                data[row[1]] = row[2]
                             send_message(idle_thread, connection)
                             send_message(idle_thread, connection, data)
 
