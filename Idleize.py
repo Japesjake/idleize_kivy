@@ -1,7 +1,7 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
-from kivy.properties import NumericProperty
+from kivy.properties import DictProperty
 import socket, threading, json, queue
 
 # data received initial= [('JpJab', 'iron ore', 0), ('JpJab', 'copper ore', 73377)]
@@ -25,8 +25,8 @@ def get_count(item_name):
 class Idleize(App):
     player_name = 'JpJab'
     idling = False
-    copper_ore = NumericProperty(0)
-    data = {}
+    # copper_ore = NumericProperty(0)
+    data = DictProperty({'copper ore': 7})
     def send(self,msg):
         if self.idling == False: self.idling = True
         else: self.idling = False
@@ -41,8 +41,7 @@ class Idleize(App):
         else:
             if msg[2] == 'True': self.idling = True
             elif msg[2] == 'False': self.idling = False
-            self.data[msg[0]] = msg[3]
-
+            self.data[msg[0]] = msg[3][0][0]
 
     def receiver(self):
         while True:
@@ -61,9 +60,9 @@ class Idleize(App):
     def build(self):
         self.main = MainLayout()
         return self.main
-app = Idleize()
-app.connect()
+idle = Idleize()
+idle.connect()
 try:
-    app.run()
+    idle.run()
 except Exception as e:
     print(e)
