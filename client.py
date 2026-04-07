@@ -2,7 +2,7 @@ import socket
 
 def start_client():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('localhost', 1235))
+    client.connect(('localhost', 1234))
     
     while True:
         msg = input("Message (type 'quit' to exit): ")
