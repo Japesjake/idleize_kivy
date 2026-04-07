@@ -1,7 +1,18 @@
 import socket
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('172.238.207.140', 1234))
+def start_client():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(('localhost', 1235))
+    
+    while True:
+        msg = input("Message (type 'quit' to exit): ")
+        if msg.lower() == 'quit':
+            break
+        client.send(msg.encode('utf-8'))
+        response = client.recv(1024).decode('utf-8')
+        print(f"Server says: {response}")
 
-print(client.recv(1024).decode())
-client.send('Hello Server'.encode('utf-8'))
+    client.close()
+
+if __name__ == "__main__":
+    start_client()
