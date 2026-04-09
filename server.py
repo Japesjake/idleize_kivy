@@ -3,7 +3,7 @@ import threading, queue, time, sqlite3, json
 
 q = queue.Queue()
 host = '0.0.0.0'
-port = 1234
+port = 1235
 
 idle_threads = []
 connections = []
@@ -13,7 +13,6 @@ cursor = sql_conn.cursor()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
 items = [item[0] for item in items]
-print(items)
 class Server():
     def __init__(self):
         pass
@@ -57,12 +56,14 @@ class Server():
             username = conn.recv(1024).decode('utf-8')
             print(f'username received: {username}')
             ## checks for relevant running threads then send info to client ##
+            conflict = False
             if idle_threads:
                 for idle_thread in idle_threads:
                     if idle_thread.username == username:
                         conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
                         print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
-            else: 
+                        conflict = True
+            if not conflict:
                 conn.sendall(json.dumps('false').encode('utf-8'))
             ## Starts a new connection thread ##
             thread = threading.Thread(target=self.handle_client, args=(conn, addr, username))
@@ -91,7 +92,7 @@ class Idle_thread():
             cursor.execute(sql,(self.username, self.item))
             self.count = cursor.fetchall()[0][0]
             print(f'{self.item}, {self.count}')
-
+        idle_threads.remove(self)
 class Connection():
     def __init__(self, conn, addr, username, thread):
         self.conn = conn
