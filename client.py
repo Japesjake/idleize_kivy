@@ -10,7 +10,7 @@ class MainLayout(BoxLayout):
 
 # with open('data.p', 'wb') as file:
 #     pickle.dump({'copper ore': 4}, file)
-
+0
 
 class Idleize(App):
     with open('data.p', 'rb') as file:
@@ -20,6 +20,7 @@ class Idleize(App):
     idling = False
     item = 'item'
     thread = 'thread'
+    idling = False
     def build(self):
         self.main = MainLayout()
 
@@ -37,6 +38,7 @@ class Idleize(App):
             self.data = new
             self.start_idle_thread()
         else: 
+            print('self.idling == False')
             self.idling = False
         return self.main
     def idle_thread(self):
@@ -51,6 +53,8 @@ class Idleize(App):
         self.thread.start()
     def send(self, item):
         self.client.sendall(item.encode('utf-8'))
+        if self.idling: self.idling = False
+        else: self.idling = True
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
