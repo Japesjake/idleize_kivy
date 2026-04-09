@@ -40,14 +40,16 @@ class Idleize(App):
         return self.main
     def idle_thread(self):
         while True:
-            if self.item != 'item':
-                print('idling...')
-                new = dict(self.data).copy()
-                new[self.item] += 1
-                self.data = new
+            while self.idling:
                 time.sleep(1)
+                print(self.item)
+                if self.item != 'item':
+                    print('idling...')
+                    new = dict(self.data).copy()
+                    new[self.item] += 1
+                    self.data = new
     def start_idle_thread(self):
-        thread = threading.Thread(target=self.idle_thread)
+        thread = threading.Thread(target=self.idle_thread, daemon=True)
         print(f'thread started.')
         thread.start()
         return thread
@@ -56,6 +58,7 @@ class Idleize(App):
         if self.idling: self.idling = False
         else: self.idling = True
         print(f'self.idling = {self.idling}')
+        self.item = item
 
     def on_stop(self):
         with open('data.p', "wb") as file:
