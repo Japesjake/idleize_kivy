@@ -2,21 +2,33 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.properties import DictProperty
-import socket, threading, json, queue
+import socket, pickle, json
 
 Builder.load_file('main.kv')
-data = DictProperty()
-
 class MainLayout(BoxLayout):
-    data = data
+    pass
 
 class Idleize(App):
-    player_name = 'JpJab'
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('localhost', 1235))
-    client.sendall(player_name.encode('utf-8'))
+    with open('data.p', 'rb') as file:
+        data = DictProperty(pickle.load(file))
+        player_name = 'JpJab'
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
     def build(self):
         self.main = MainLayout()
+
+        self.client.connect(('localhost', 1236))
+        self.client.sendall(self.player_name.encode('utf-8'))
+        print(f'Sent to server: {self.player_name}')
+        response = json.loads(self.client.recv(1024).decode('utf-8'))
+        print(f'Received from Server: {response}')
+        if response != 'false':
+            new = dict(self.data).copy()
+            new[response[0]] = response[1]
+            print(type(response))
+            print(response)
+            self.data = new
+            print(self.data)
         return self.main
     def send(self, msg):
         self.client.sendall(msg.encode('utf-8'))

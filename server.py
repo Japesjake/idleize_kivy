@@ -1,9 +1,9 @@
 import socket
-import threading, queue, time, sqlite3
+import threading, queue, time, sqlite3, json
 
 q = queue.Queue()
 host = '0.0.0.0'
-port = 1235
+port = 1236
 
 idle_threads = []
 connections = []
@@ -50,11 +50,20 @@ class Server():
         server.bind((host, port))
         server.listen()
         print(f"[LISTENING] Server is listening on localhost: {port}")
-        while True: 
+        while True:
             # Wait for a new connection (blocking call)
             conn, addr = server.accept()
             username = conn.recv(1024).decode('utf-8')
             print(f'username received: {username}')
+            ## checks for relevant running threads then send info to client ##
+            if idle_threads:
+                for idle_thread in idle_threads:
+                    if idle_thread.username == username:
+                        conn.sendall(json.dumps((idle_thread.item,idle_thread.count, idle_thread.idling)).encode('utf-8'))
+                        print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count}, {idle_thread.idling})')
+            else: 
+                conn.sendall(json.dumps('false').encode('utf-8'))
+            ## Starts a new connection thread ##
             thread = threading.Thread(target=self.handle_client, args=(conn, addr, username))
             connection = Connection(conn, addr, username, thread)
             connections.append(connection)
@@ -74,24 +83,22 @@ class Idle_thread():
         self.idling = False
         self.username = username
         self.item = item
+        self.count = 15
     def idle_loop(self):
-        # if not q.empty():
-        #     msg = q.get()
-        #     self.idling = msg[2]
         sql_conn = sqlite3.connect('data.db')
-        cursor = sql_conn.cursor()        
+        cursor = sql_conn.cursor()    
+        print('idling...')
         while True:
-            print('idling...')
+            self.idling = True
             time.sleep(1)
             sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
             cursor.execute(sql,(self.item,self.username))
             sql_conn.commit()
-            #######
-            # if not q.empty():
-            #     msg = q.get()
-            #     self.idling = msg[2]
-            #     if self.idling == False:
-            #         break
+            ### add sql query to get count ####
+            sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"
+            cursor.execute(sql,(self.username, self.item))
+            self.count = cursor.fetchall()[0][0]
+            print(f'{self.item}, {self.count}')
     def start_idler(self):
         idle_thread = threading.Thread(target=self.idle_loop)
         idle_thread.start()
