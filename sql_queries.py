@@ -30,9 +30,9 @@ except sqlite3.Error: print('error connecting to database')
 # print(cursor.fetchall())
 # connection.close()
 
-# cursor.execute('ALTER TABLE Player ADD COLUMN address VARCHAR(20)')
-# connection.commit()
-# connection.close()
+cursor.execute('ALTER TABLE PlayerItem ADD COLUMN count INTEGER')
+connection.commit()
+connection.close()
 
 with sqlite3.connect('data.db') as db_connection:
     cursor = db_connection.cursor()

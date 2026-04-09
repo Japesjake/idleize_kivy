@@ -1,11 +1,19 @@
 import socket
-import threading, queue, time
+import threading, queue, time, sqlite3
 
 q = queue.Queue()
 host = '0.0.0.0'
 port = 1235
+
 idle_threads = []
 connections = []
+
+sql_conn = sqlite3.connect('data.db')
+cursor = sql_conn.cursor()
+cursor.execute("SELECT item_name FROM Item")
+items = cursor.fetchall()
+items = [item[0] for item in items]
+print(items)
 class Server():
     def __init__(self):
         pass
@@ -14,19 +22,24 @@ class Server():
         print(f"[NEW CONNECTION] {addr} connected.")
         try:
             while True:
-                # Receive data (blocking call)
                 data = conn.recv(1024).decode('utf-8')
                 if not data:
                     break  # Client disconnected
-                
-
-
-                q.put(data)
-                
+                # q.put(data)
                 print(f"[{addr}] says: {data}")
-                
                 # Echo back to client
                 conn.send(f"Server received: {data}".encode('utf-8'))
+                if data in items:
+                    conflict = False
+                    for connection in connections:
+                        for idle_thread in idle_threads:
+                            if connection.username == idle_thread.username:
+                                conflict = True
+                    if not conflict:
+                        idle_thread = Idle_thread(username, data)
+                        idle_threads.append(idle_thread)
+                        idle_thread.start_idler()
+                    
         except ConnectionResetError:
             pass
         finally:
@@ -37,34 +50,16 @@ class Server():
         server.bind((host, port))
         server.listen()
         print(f"[LISTENING] Server is listening on localhost: {port}")
-        while True:
-            
+        while True: 
             # Wait for a new connection (blocking call)
             conn, addr = server.accept()
-            ####
-            # username = conn.recv(1024).decode('uft-8')
-            username = 'JpJab'
-            ####
+            username = conn.recv(1024).decode('utf-8')
+            print(f'username received: {username}')
             thread = threading.Thread(target=self.handle_client, args=(conn, addr, username))
             connection = Connection(conn, addr, username, thread)
             connections.append(connection)
             connection.thread.start()
-
-            conflict = False
-            print(connections)
-            print(idle_threads)
-            for connection in connections:
-                print(connection.username)
-                for idle_thread in idle_threads:
-                    print(idle_thread.username)
-                    if connection.username == idle_thread.username:
-                        conflict = True
-                        print('conflict !!!!!')
-            if not conflict:
-                idle_thread = Idle_thread(username)
-                idle_threads.append(idle_thread)
-                idle_thread.start_idler()
-                print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
+            print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
 
 class Connection():
     def __init__(self, conn, addr, username, thread):
@@ -75,24 +70,30 @@ class Connection():
 
 
 class Idle_thread():
-    def __init__(self, username):
+    def __init__(self, username, item):
         self.idling = False
         self.username = username
-    def idle_loop(self, username):
+        self.item = item
+    def idle_loop(self):
         # if not q.empty():
         #     msg = q.get()
         #     self.idling = msg[2]
+        sql_conn = sqlite3.connect('data.db')
+        cursor = sql_conn.cursor()        
         while True:
             print('idling...')
-            print('.')
             time.sleep(1)
-            if not q.empty():
-                msg = q.get()
-                self.idling = msg[2]
-                if self.idling == False:
-                    break
+            sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
+            cursor.execute(sql,(self.item,self.username))
+            sql_conn.commit()
+            #######
+            # if not q.empty():
+            #     msg = q.get()
+            #     self.idling = msg[2]
+            #     if self.idling == False:
+            #         break
     def start_idler(self):
-        idle_thread = threading.Thread(target=self.idle_loop, args=(self.username,))
+        idle_thread = threading.Thread(target=self.idle_loop)
         idle_thread.start()
         print(f"idle thread created.")
 
