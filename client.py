@@ -25,8 +25,6 @@ class Idleize(App):
         if response != 'false':
             new = dict(self.data).copy()
             new[response[0]] = response[1]
-            print(type(response))
-            print(response)
             self.data = new
             print(self.data)
         return self.main
