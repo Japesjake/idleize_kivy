@@ -36,35 +36,42 @@
         Screen:
             name: 'Mining'
             GridLayout:
-                cols: 1
-                Label:
-                    text: 'Mining'
+                cols: 2
                 Button:
-                    text: 'Copper'  
+                    text: 'Copper Ore: ' + '\n  ' + str(app.data['copper ore'])
                     on_press: app.send('copper ore')
-                Label:
-                    text: str(app.data['copper ore'])
+                Button:
+                    text: 'Iron Ore: ' + '\n  ' + str(app.data['iron ore'])
+                    on_press: app.send('iron ore')
         Screen:
-            name: 'null'
-            Label:
-                text: 'Character'
+            name: 'Character'
+            Button:
+                text: 'sync data'
+                on_press: app.sync()
+
         Screen:
             name: 'Combat'
             Label:
                 text: 'Combat'
         Screen:
             name: 'Smelting'
-            Label:
-                text: 'Welcome to Screen 2'
+            GridLayout:
+                cols: 2
+                Button:
+                    text: 'Copper Ingot: ' + '\n  ' + str(app.data['copper ingot'])
+                    on_press: app.send('copper ingot')
+                Button:
+                    text: 'Iron Ingot: ' + '\n  ' + str(app.data['iron ingot'])
+                    on_press: app.send('iron ingot')
         Screen:
             name: 'Crafting'
             Label:
-                text: 'Welcome to Screen 1'
+                text: 'Crafting'
         Screen:
             name: 'Gathering'
             Label:
-                text: 'Welcome to Screen 2'
+                text: 'Gathering'
         Screen:
             name: 'Cooking'
             Label:
-                text: 'Welcome to Screen 1'
+                text: 'Cooking'

@@ -9,7 +9,7 @@ class MainLayout(BoxLayout):
     pass
 
 # with open('data.p', 'wb') as file:
-#     pickle.dump({'copper ore': 4}, file)
+#     pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
 
 class Idleize(App):
     with open('data.p', 'rb') as file:
@@ -20,7 +20,7 @@ class Idleize(App):
     idling = False
     def build(self):
         self.main = MainLayout()
-        self.client.connect(('localhost', 1235))
+        self.client.connect(('localhost', 1234))
         self.client.sendall(self.player_name.encode('utf-8'))
         print(f'Sent to server: {self.player_name}')
         response = json.loads(self.client.recv(1024).decode('utf-8'))
@@ -34,7 +34,6 @@ class Idleize(App):
             print(f'data on local client after receiving data: {self.data}')
             self.idling = True
         else: 
-            print('self.idling == False')
             self.idling = False
         self.start_idle_thread()
         return self.main
@@ -59,7 +58,14 @@ class Idleize(App):
         else: self.idling = True
         print(f'self.idling = {self.idling}')
         self.item = item
-
+        if self.item not in self.data.keys():
+            new = dict(self.data).copy()
+            new[self.item] = 0
+            self.data = new
+    def sync(self):
+        self.client.sendall('sync'.encode('utf-8'))
+        response = json.loads(self.client.recv(1024).decode('utf-8'))
+        print(response)
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)

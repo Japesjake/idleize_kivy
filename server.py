@@ -3,7 +3,7 @@ import threading, queue, time, sqlite3, json
 
 q = queue.Queue()
 host = '0.0.0.0'
-port = 1235
+port = 1234
 
 idle_threads = []
 connections = []
@@ -20,11 +20,20 @@ class Server():
         """Function to handle individual client communication."""
         print(f"[NEW CONNECTION] {addr} connected.")
         try:
+            with sqlite3.connect('data.db') as connection:
+                cursor = connection.cursor()
+        except sqlite3.Error: print('error connecting to database')
+        try:
             while True:
                 data = conn.recv(1024).decode('utf-8')
                 if not data:
                     break
                 print(f"[{addr}] says: {data}")
+                if data == 'sync':
+                    pass
+                    # sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?"
+                    # cursor.execute
+                    # conn.sendall(json.dumps(data).encode('utf-8'))
                 if data in items:
                     conflict = False
                     for connection in connections:
