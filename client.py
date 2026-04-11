@@ -66,6 +66,10 @@ class Idleize(App):
         self.client.sendall('sync'.encode('utf-8'))
         response = json.loads(self.client.recv(1024).decode('utf-8'))
         print(response)
+        for row in response:
+            new = dict(self.data).copy()
+            new[row[0]] = row[1]
+            self.data = new
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)

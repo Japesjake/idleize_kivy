@@ -31,9 +31,10 @@ class Server():
                 print(f"[{addr}] says: {data}")
                 if data == 'sync':
                     pass
-                    # sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?"
-                    # cursor.execute
-                    # conn.sendall(json.dumps(data).encode('utf-8'))
+                    sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?"
+                    cursor.execute(sql,(username,))
+                    msg = cursor.fetchall()
+                    conn.sendall(json.dumps(msg).encode('utf-8'))
                 if data in items:
                     conflict = False
                     for connection in connections:
