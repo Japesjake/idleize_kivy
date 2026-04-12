@@ -28,6 +28,9 @@
         Button:
             text: 'Cooking'
             on_press: sm.current = 'Cooking'
+        Button:
+            text: 'sync data'
+            on_press: app.sync()
             
     # Right Panel - Content Area
     ScreenManager:
@@ -45,9 +48,8 @@
                     on_press: app.send('iron ore')
         Screen:
             name: 'Character'
-            Button:
-                text: 'sync data'
-                on_press: app.sync()
+            Label:
+                text: 'Character'
 
         Screen:
             name: 'Combat'

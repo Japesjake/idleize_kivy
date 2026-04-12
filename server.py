@@ -1,18 +1,27 @@
 import socket
 import threading, queue, time, sqlite3, json
 
-q = queue.Queue()
+# q = queue.Queue()
 host = '0.0.0.0'
 port = 1234
 
 idle_threads = []
 connections = []
 
+items = [('copper ore',), ('iron ore',), ('copper ingot',), ('iron ingot',)]
 sql_conn = sqlite3.connect('data.db')
 cursor = sql_conn.cursor()
+
+with open('create_db.sql', 'r') as f:
+    create_db = f.read()
+cursor.executescript(create_db)
+
+cursor.executemany("INSERT OR IGNORE INTO Item (item_name) VALUES (?)", items)
+sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
 items = [item[0] for item in items]
+
 class Server():
     def __init__(self):
         pass
@@ -36,6 +45,7 @@ class Server():
                     msg = cursor.fetchall()
                     conn.sendall(json.dumps(msg).encode('utf-8'))
                 if data in items:
+                    ### add a new row in PlayerItem ###
                     conflict = False
                     for connection in connections:
                         for idle_thread in idle_threads:
@@ -60,11 +70,21 @@ class Server():
         server.bind((host, port))
         server.listen()
         print(f"[LISTENING] Server is listening on localhost: {port}")
+
+        sql_conn = sqlite3.connect('data.db')
+        cursor = sql_conn.cursor()
+
         while True:
             # Wait for a new connection (blocking call)
             conn, addr = server.accept()
             username = conn.recv(1024).decode('utf-8')
             print(f'username received: {username}')
+            # cursor.execute('SELECT name FROM Player WHERE name = ?',(username,))
+            # check_username = cursor.fetchall()
+            # if not check_username:
+            cursor.execute('INSERT OR IGNORE INTO Player (name) VALUES (?)',(username,))
+            sql_conn.commit()
+
             ## checks for relevant running threads then send info to client ##
             conflict = False
             if idle_threads:
@@ -100,9 +120,18 @@ class Idle_thread():
             sql_conn.commit()
             sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"
             cursor.execute(sql,(self.username, self.item))
-            self.count = cursor.fetchall()[0][0]
-            print(f'{self.item}, {self.count}')
+            item_count = cursor.fetchall()
+            if not item_count:
+                print('No record found. Inserting record')
+                sql = 'INSERT INTO PlayerItem (player_id, item_id) VALUES ((SELECT player_id from player WHERE name = ?), (SELECT item_id FROM item WHERE item_name = ?))'
+                cursor.execute(sql,(self.username, self.item))
+                sql_conn.commit()
+            else:
+                print(f'record found with count {item_count}')
+                self.count = item_count[0][0]
+                print(f'{self.item}, {self.count}')
         idle_threads.remove(self)
+        sql_conn.close()
 class Connection():
     def __init__(self, conn, addr, username, thread):
         self.conn = conn

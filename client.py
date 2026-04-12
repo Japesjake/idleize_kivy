@@ -3,13 +3,17 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.properties import DictProperty
 import socket, pickle, json, time, threading
+from pathlib import Path
+
 
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
     pass
 
-# with open('data.p', 'wb') as file:
-#     pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
+files = Path('data.p')
+if not files.is_file():
+    with open('data.p', 'wb') as file:
+        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
 
 class Idleize(App):
     with open('data.p', 'rb') as file:
