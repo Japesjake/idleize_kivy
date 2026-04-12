@@ -8,7 +8,6 @@ port = 1234
 idle_threads = []
 connections = []
 
-items = [('copper ore',), ('iron ore',), ('copper ingot',), ('iron ingot',)]
 sql_conn = sqlite3.connect('data.db')
 cursor = sql_conn.cursor()
 
@@ -16,7 +15,8 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-cursor.executemany("INSERT OR IGNORE INTO Item (item_name) VALUES (?)", items)
+items = [('copper ore',None), ('iron ore',None), ('copper ingot','copper ore'), ('iron ingot', 'iron ore')]
+cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?))", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
@@ -111,13 +111,21 @@ class Idle_thread():
         self.thread = threading.Thread(target=self.idle_loop)
     def idle_loop(self):
         sql_conn = sqlite3.connect('data.db')
-        cursor = sql_conn.cursor()    
+        cursor = sql_conn.cursor()
         print('idling...')
         while self.idling:
             time.sleep(1)
             sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
             cursor.execute(sql,(self.item,self.username))
+
+            # sql = "SELECT count FROM PlayerItem WHERE item_name = ?"
+            
+
+            sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE Item.crafts_from_item_id = PlayerItem.item_id AND Player.name = ? AND Item.item_name = ?"
+            cursor.execute(sql,(self.username,self.item))
             sql_conn.commit()
+
+
             sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"
             cursor.execute(sql,(self.username, self.item))
             item_count = cursor.fetchall()
