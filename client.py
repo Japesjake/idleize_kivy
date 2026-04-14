@@ -11,6 +11,11 @@ Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
     pass
 
+files = Path('relationships.p')
+if not files.is_file():
+    with open('relationships.p', 'wb') as file:
+        pickle.dump({'copper ore': 'copper ingot','iron ore': 'iron ingot','copper ingot': None, 'iron ingot': None}, file)
+
 files = Path('data.p')
 if not files.is_file():
     with open('data.p', 'wb') as file:
@@ -19,6 +24,8 @@ if not files.is_file():
 class Idleize(App):
     with open('data.p', 'rb') as file:
         data = DictProperty(pickle.load(file))
+    with open('relationships.p', 'rb') as file:
+        relationships = DictProperty(pickle.load(file))
     player_name = 'JpJab'
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     item = 'item'
@@ -51,6 +58,11 @@ class Idleize(App):
                     print('idling...')
                     new = dict(self.data).copy()
                     new[self.item] += 1
+                    self.data = new
+                child_item = self.relationships[self.item]
+                if child_item and self.data[child_item] > 0:
+                    new = dict(self.data).copy()
+                    new[child_item] -= 1
                     self.data = new
     def start_idle_thread(self):
         thread = threading.Thread(target=self.idle_thread, daemon=True)

@@ -5,8 +5,8 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
-sql = "SELECT count FROM PlayerItem WHERE Item.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?)"
-cursor.execute(sql,('iron ingot',))
+sql = "SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?"
+cursor.execute(sql,('copper ingot',))
 print(cursor.fetchall())
 
 # sql = "SELECT Item.item_name, PlayerItem.count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"

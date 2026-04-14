@@ -1,7 +1,6 @@
 import socket
-import threading, queue, time, sqlite3, json
+import threading, time, sqlite3, json
 
-# q = queue.Queue()
 host = '0.0.0.0'
 port = 1234
 
@@ -119,10 +118,6 @@ class Idle_thread():
             child_count = cursor.fetchall()
             print(f'child_count: {child_count}')
 
-            # sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"  
-            # cursor.execute(sql, (self.username, self.item))
-            # parent_count = cursor.fetchall()
-            # if parent_count: parent_count = parent_count[0][0]
             if not child_count:
                 sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
                 cursor.execute(sql,(self.item,self.username))
@@ -135,7 +130,7 @@ class Idle_thread():
                     cursor.execute(sql,(self.item,self.username))
                     sql_conn.commit()
 
-                    sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE Item.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
+                    sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
                     cursor.execute(sql,(self.item,self.username))
                     sql_conn.commit()
 
@@ -149,7 +144,7 @@ class Idle_thread():
                 cursor.execute(sql,(self.username, self.item))
                 sql_conn.commit()
             else:
-                print(f'record found with count {item_count}')
+                # print(f'record found with count {item_count}')
                 self.count = item_count[0][0]
                 print(f'{self.item}, {self.count}')
         idle_threads.remove(self)
