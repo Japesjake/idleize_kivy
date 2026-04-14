@@ -39,13 +39,12 @@ class Server():
                     break
                 print(f"[{addr}] says: {data}")
                 if data == 'sync':
-                    pass
-                    sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?"
+                    sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
                     cursor.execute(sql,(username,))
                     msg = cursor.fetchall()
+                    print(f'data sent to client: {msg}')
                     conn.sendall(json.dumps(msg).encode('utf-8'))
                 if data in items:
-                    ### add a new row in PlayerItem ###
                     conflict = False
                     for connection in connections:
                         for idle_thread in idle_threads:
@@ -115,15 +114,30 @@ class Idle_thread():
         print('idling...')
         while self.idling:
             time.sleep(1)
-            sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
-            cursor.execute(sql,(self.item,self.username))
+            sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND Player.name = ?;"
+            cursor.execute(sql, (self.item,self.username))
+            child_count = cursor.fetchall()
+            print(f'child_count: {child_count}')
 
-            # sql = "SELECT count FROM PlayerItem WHERE item_name = ?"
-            
+            # sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"  
+            # cursor.execute(sql, (self.username, self.item))
+            # parent_count = cursor.fetchall()
+            # if parent_count: parent_count = parent_count[0][0]
+            if not child_count:
+                sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
+                cursor.execute(sql,(self.item,self.username))
+                sql_conn.commit()
+            else:
+                child_count = child_count[0][0]
+                if child_count > 0:
+                    print(f'child count when above 0: {child_count}')
+                    sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
+                    cursor.execute(sql,(self.item,self.username))
+                    sql_conn.commit()
 
-            sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE Item.crafts_from_item_id = PlayerItem.item_id AND Player.name = ? AND Item.item_name = ?"
-            cursor.execute(sql,(self.username,self.item))
-            sql_conn.commit()
+                    sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE Item.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
+                    cursor.execute(sql,(self.item,self.username))
+                    sql_conn.commit()
 
 
             sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"

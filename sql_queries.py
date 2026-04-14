@@ -5,6 +5,19 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
+sql = "SELECT count FROM PlayerItem WHERE Item.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?)"
+cursor.execute(sql,('iron ingot',))
+print(cursor.fetchall())
+
+# sql = "SELECT Item.item_name, PlayerItem.count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
+# cursor.execute(sql,('JpJab',))
+# msg = cursor.fetchall()
+# print(msg)
+
+# sql = "UPDATE PlayerItem SET count = 1 WHERE player_id = 1 AND item_id = 1"
+# cursor.execute(sql)
+# connection.commit()
+
 # def create_db():
 #     with open("create_db.sql", "r") as sql_file:
 #         sql_script = sql_file.read()
@@ -30,11 +43,11 @@ except sqlite3.Error: print('error connecting to database')
 # print(cursor.fetchall())
 # connection.close()
 
-cursor.execute('ALTER TABLE PlayerItem ADD COLUMN count INTEGER')
-connection.commit()
-connection.close()
+# cursor.execute('ALTER TABLE PlayerItem ADD COLUMN count INTEGER')
+# connection.commit()
+# connection.close()
 
-with sqlite3.connect('data.db') as db_connection:
-    cursor = db_connection.cursor()
-    cursor.execute('SELECT player_id FROM Player WHERE name = ?;',('JpJab',))
-    print(cursor.fetchall()[0][0])
+# with sqlite3.connect('data.db') as db_connection:
+#     cursor = db_connection.cursor()
+#     cursor.execute('SELECT player_id FROM Player WHERE name = ?;',('JpJab',))
+#     print(cursor.fetchall()[0][0])

@@ -4,7 +4,8 @@ from kivy.lang import Builder
 from kivy.properties import DictProperty
 import socket, pickle, json, time, threading
 from pathlib import Path
-
+HOST = 'localhost'
+PORT = 1234
 
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
@@ -24,7 +25,7 @@ class Idleize(App):
     idling = False
     def build(self):
         self.main = MainLayout()
-        self.client.connect(('localhost', 1234))
+        self.client.connect((HOST, PORT))
         self.client.sendall(self.player_name.encode('utf-8'))
         print(f'Sent to server: {self.player_name}')
         response = json.loads(self.client.recv(1024).decode('utf-8'))
