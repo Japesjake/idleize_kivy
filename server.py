@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1234
+port = 1235
 
 idle_threads = []
 connections = []

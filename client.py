@@ -5,7 +5,7 @@ from kivy.properties import DictProperty
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1234
+PORT = 1235
 
 Builder.load_file('main.kv')
 class MainLayout(BoxLayout):
@@ -14,7 +14,7 @@ class MainLayout(BoxLayout):
 files = Path('relationships.p')
 if not files.is_file():
     with open('relationships.p', 'wb') as file:
-        pickle.dump({'copper ore': 'copper ingot','iron ore': 'iron ingot','copper ingot': None, 'iron ingot': None}, file)
+        pickle.dump({'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore'}, file)
 
 files = Path('data.p')
 if not files.is_file():
@@ -54,13 +54,16 @@ class Idleize(App):
             while self.idling:
                 time.sleep(1)
                 print(self.item)
-                if self.item != 'item':
+                child_item = self.relationships[self.item]
+                # if self.item != 'item':
+                if not child_item or self.data[child_item] > 0:
                     print('idling...')
                     new = dict(self.data).copy()
                     new[self.item] += 1
                     self.data = new
-                child_item = self.relationships[self.item]
                 if child_item and self.data[child_item] > 0:
+                    print(f'subtracting 1 from {child_item}')
+                    print(f'child item count: {self.data[child_item]}')
                     new = dict(self.data).copy()
                     new[child_item] -= 1
                     self.data = new
