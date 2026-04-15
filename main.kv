@@ -1,79 +1,104 @@
 
 #:import NoTransition kivy.uix.screenmanager.NoTransition
+<WindowManager>:
+    LoginScreen:
+    MainLayout:
+<LoginScreen>:
+    name: "login"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 50
+        spacing: 20
+        Label:
+            text: "Username"
+        TextInput:
+            id: username
+            multiline: False
+        Label:
+            text: "Password"
+        TextInput:
+            id: password
+            multiline: False
+            password: True
+        Button:
+            text: "Login"
+            on_release: root.verify_credentials()
+
 <MainLayout>:
     orientation: 'horizontal'
-    
+    name: 'main'
     # Left Panel - Menu
     BoxLayout:
-        orientation: 'vertical'
-        size_hint_x: 0.2
-        Button:
-            text: 'Character'
-            on_press: sm.current = 'Character'
-        Button:
-            text: 'Combat'
-            on_press: sm.current = 'Combat'
-        Button:
-            text: 'Mining'
-            on_press: sm.current = 'Mining'
-        Button:
-            text: 'Smelting'
-            on_press: sm.current = 'Smelting'
-        Button:
-            text: 'Crafting'
-            on_press: sm.current = 'Crafting'
-        Button:
-            text: 'Gathering'
-            on_press: sm.current = 'Gathering'
-        Button:
-            text: 'Cooking'
-            on_press: sm.current = 'Cooking'
-        Button:
-            text: 'sync data'
-            on_press: app.sync()
-            
-    # Right Panel - Content Area
-    ScreenManager:
-        id: sm
-        transition: NoTransition()
-        Screen:
-            name: 'Mining'
-            GridLayout:
-                cols: 2
-                Button:
-                    text: 'Copper Ore: ' + '\n  ' + str(app.data['copper ore'])
-                    on_press: app.send('copper ore')
-                Button:
-                    text: 'Iron Ore: ' + '\n  ' + str(app.data['iron ore'])
-                    on_press: app.send('iron ore')
-        Screen:
-            name: 'Character'
-            Label:
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.2
+            Button:
                 text: 'Character'
-
-        Screen:
-            name: 'Combat'
-            Label:
+                on_press: sm.current = 'Character'
+            Button:
                 text: 'Combat'
-        Screen:
-            name: 'Smelting'
-            GridLayout:
-                cols: 2
-                Button:
-                    text: 'Copper Ingot: ' + '\n  ' + str(app.data['copper ingot'])
-                    on_press: app.send('copper ingot')
-                Button:
-                    text: 'Iron Ingot: ' + '\n  ' + str(app.data['iron ingot'])
-                    on_press: app.send('iron ingot')
-        Screen:
-            name: 'Crafting'
-            Label:
+                on_press: sm.current = 'Combat'
+            Button:
+                text: 'Mining'
+                on_press: sm.current = 'Mining'
+            Button:
+                text: 'Smelting'
+                on_press: sm.current = 'Smelting'
+            Button:
                 text: 'Crafting'
-        Screen:
-            name: 'Gathering'
-            Label:
+                on_press: sm.current = 'Crafting'
+            Button:
                 text: 'Gathering'
-        Screen:
-            name: 'Cooking'
-            Label:
+                on_press: sm.current = 'Gathering'
+            Button:
                 text: 'Cooking'
+                on_press: sm.current = 'Cooking'
+            Button:
+                text: 'sync data'
+                on_press: app.sync()
+                
+        # Right Panel - Content Area
+        ScreenManager:
+            id: sm
+            transition: NoTransition()
+            Screen:
+                name: 'Mining'
+                GridLayout:
+                    cols: 2
+                    Button:
+                        text: 'Copper Ore: ' + '\n  ' + str(app.data['copper ore'])
+                        on_press: app.send('copper ore')
+                    Button:
+                        text: 'Iron Ore: ' + '\n  ' + str(app.data['iron ore'])
+                        on_press: app.send('iron ore')
+            Screen:
+                name: 'Character'
+                Label:
+                    text: 'Character'
+
+            Screen:
+                name: 'Combat'
+                Label:
+                    text: 'Combat'
+            Screen:
+                name: 'Smelting'
+                GridLayout:
+                    cols: 2
+                    Button:
+                        text: 'Copper Ingot: ' + '\n  ' + str(app.data['copper ingot'])
+                        on_press: app.send('copper ingot')
+                    Button:
+                        text: 'Iron Ingot: ' + '\n  ' + str(app.data['iron ingot'])
+                        on_press: app.send('iron ingot')
+            Screen:
+                name: 'Crafting'
+                Label:
+                    text: 'Crafting'
+            Screen:
+                name: 'Gathering'
+                Label:
+                    text: 'Gathering'
+            Screen:
+                name: 'Cooking'
+                Label:
+                    text: 'Cooking'

@@ -2,14 +2,11 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.properties import DictProperty
+from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
 PORT = 1235
-
-Builder.load_file('main.kv')
-class MainLayout(BoxLayout):
-    pass
 
 files = Path('relationships.p')
 if not files.is_file():
@@ -21,6 +18,18 @@ if not files.is_file():
     with open('data.p', 'wb') as file:
         pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
 
+Builder.load_file('main.kv')
+class LoginScreen(Screen):
+    def verify_credentials(self):
+        print('verified')
+        self.manager.current = 'main'
+class MainLayout(Screen):
+    pass
+class WindowManager(ScreenManager):
+    pass
+
+
+
 class Idleize(App):
     with open('data.p', 'rb') as file:
         data = DictProperty(pickle.load(file))
@@ -31,7 +40,7 @@ class Idleize(App):
     item = 'item'
     idling = False
     def build(self):
-        self.main = MainLayout()
+        self.main = WindowManager()
         self.client.connect((HOST, PORT))
         self.client.sendall(self.player_name.encode('utf-8'))
         print(f'Sent to server: {self.player_name}')
