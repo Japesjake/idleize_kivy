@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS Player (
     player_id INTEGER PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     start_date TEXT DEFAULT (datetime('now'))
 );
 

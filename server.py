@@ -28,46 +28,52 @@ class Server():
         """Function to handle individual client communication."""
         print(f"[NEW CONNECTION] {addr} connected.")
         try:
-            with sqlite3.connect('data.db') as connection:
-                cursor = connection.cursor()
+            with sqlite3.connect('data.db') as sql_connection:
+                cursor = sql_connection.cursor()
         except sqlite3.Error: print('error connecting to database')
         try:
             while True:
-                data = json.loads(conn.recv(1024).decode('utf-8'))
+                data = conn.recv(1024).decode('utf-8')
+                if data:
+                    data = json.loads(data)
                 if not data:
                     break
                 print(f"[{addr}] says: {data}")
+
                 if len(data) == 2:
                     username = data[0]
                     password = data[1]
-                    print(f'received username: {username} password: {password} from client')
+                    print(f'received username: {username} password: [redacted] from client')
+
                     for connection in connections:
                         if connection.conn == conn and connection.addr == addr:
                             connection.username = username
                             connection.password = password
-                            conn.sendall(json.dumps(['good']).encode('utf-8'))
-                        else:
-                            conn.sendall(json.dumps(['bad']).encode('utf-8'))
+                            cursor.execute("SELECT name, password FROM Player WHERE name = ?",(username,))
+                            credentials = cursor.fetchall()
+                            if credentials and credentials[0][0] == username and credentials[0][1] == password:
+                                # conn.sendall(json.dumps('good').encode('utf-8'))
+                                pass
+                            if not credentials:
+                                print(f'no player found. Creating player with credentials')
+                                # conn.sendall(json.dumps(['new']).encode('utf-8'))
+                                cursor.execute("INSERT INTO Player (name, password) VALUES (?, ?)",(username, password))
+                                sql_connection.commit()
+                    self.sync(username, conn)
                 if data[0] == 'sync':
-                    sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
-                    cursor.execute(sql,(username,))
-                    msg = cursor.fetchall()
-                    print(f'data sent to client: {msg}')
-                    conn.sendall(json.dumps([msg]).encode('utf-8'))
-                print(f'item received that looks like {data}')
+                    self.sync(username, conn)
                 if data in items:
-                    print('found item.')
                     conflict = False
                     for connection in connections:
                         for idle_thread in idle_threads:
-                            if connection.username == idle_thread.username and idle_thread.idling:
+                            if connection.conn == idle_thread.conn and idle_thread.idling:
                                 print('There is a conflict. Ending loop.')
                                 conflict = True
                                 idle_thread.idling = False
                                 print(f'There are {len(idle_threads)} idle threads active.')
                     if not conflict:
                         print('No conflict. Adding idle_thread...')
-                        idle_thread = Idle_thread(username, data)
+                        idle_thread = Idle_thread(username, data, conn, addr)
                         idle_threads.append(idle_thread)
                         idle_thread.thread.start()
                     print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
@@ -98,28 +104,37 @@ class Server():
             if idle_threads:
                 for idle_thread in idle_threads:
                     for connection in connections:
-                        if idle_thread.username == connection.username:
+                        if idle_thread.addr == connection.addr:
                             conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
                             print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
                             conflict = True
             if not conflict:
                 conn.sendall(json.dumps('false').encode('utf-8'))
-
+    def sync(self, username, conn):
+        sql_conn = sqlite3.connect('data.db')
+        cursor = sql_conn.cursor()
+        sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
+        cursor.execute(sql,(username,))
+        msg = cursor.fetchall()
+        print(f'data sent to client: {msg}')
+        conn.sendall(json.dumps(msg).encode('utf-8'))
 class Idle_thread():
-    def __init__(self, username, item):
+    def __init__(self, username, item, conn, addr):
         self.idling = True
         self.username = username
         self.item = item
         self.count = 15
-        self.thread = threading.Thread(target = self.idle_loop)
-    def idle_loop(self):
+        self.conn = conn
+        self.addr = addr
+        self.thread = threading.Thread(target=self.idle_loop, args=(self.conn, self.addr))
+    def idle_loop(self, conn, addr):
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
         print('idling...')
         while self.idling:
             time.sleep(1)
-            sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND Player.name = ?;"
-            cursor.execute(sql, (self.item,self.username))
+            sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE Player.name = ?)"
+            cursor.execute(sql, (self.item, self.username))
             child_count = cursor.fetchall()
             print(f'child_count: {child_count}')
 
@@ -159,15 +174,6 @@ class Connection():
         self.conn = conn
         self.addr = addr
         self.thread = thread
-        self.sql_conn = sqlite3.connect('data.db')
-        self.cursor = sql_conn.cursor()
-    def assign_credentials(self, username, password):
-        self.cursor.execute("SELECT username, password FROM Player WHERE Player.name = ?",(username,))
-        exists = cursor.fetchall()
-        print(f'exists {exists}')
-        if exists:
-            pass
-            # cursor.execute("SELECT name, password FROM Player")
         
 
 

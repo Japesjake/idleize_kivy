@@ -27,10 +27,10 @@ class LoginScreen(Screen):
         username = self.ids.username.text
         password = self.ids.password.text
         client.sendall(json.dumps((username, password)).encode('utf-8'))
-        response = json.loads(client.recv(1024).decode('utf-8'))
+        response = client.recv(1024).decode('utf-8')
         print(f'response: {response}')
-        if response == ['good']:
-            self.manager.current = 'main'
+        # response = json.loads()
+        self.manager.current = 'main'
 class MainLayout(Screen):
     pass
 class WindowManager(ScreenManager):
@@ -71,7 +71,6 @@ class Idleize(App):
                 time.sleep(1)
                 print(self.item)
                 child_item = self.relationships[self.item]
-                # if self.item != 'item':
                 if not child_item or self.data[child_item] > 0:
                     print('idling...')
                     new = dict(self.data).copy()
