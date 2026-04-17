@@ -6,7 +6,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1235
+PORT = 1234
 
 files = Path('relationships.p')
 if not files.is_file():
@@ -18,11 +18,19 @@ if not files.is_file():
     with open('data.p', 'wb') as file:
         pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
 
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 Builder.load_file('main.kv')
 class LoginScreen(Screen):
     def verify_credentials(self):
-        print('verified')
-        self.manager.current = 'main'
+        print('credentials sent')
+        username = self.ids.username.text
+        password = self.ids.password.text
+        client.sendall(json.dumps((username, password)).encode('utf-8'))
+        response = json.loads(client.recv(1024).decode('utf-8'))
+        print(f'response: {response}')
+        if response == ['good']:
+            self.manager.current = 'main'
 class MainLayout(Screen):
     pass
 class WindowManager(ScreenManager):
@@ -36,15 +44,14 @@ class Idleize(App):
     with open('relationships.p', 'rb') as file:
         relationships = DictProperty(pickle.load(file))
     player_name = 'JpJab'
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     item = 'item'
     idling = False
     def build(self):
         self.main = WindowManager()
-        self.client.connect((HOST, PORT))
-        self.client.sendall(self.player_name.encode('utf-8'))
-        print(f'Sent to server: {self.player_name}')
-        response = json.loads(self.client.recv(1024).decode('utf-8'))
+        client.connect((HOST, PORT))
+        # client.sendall(self.player_name.encode('utf-8'))
+        # print(f'Sent to server: {self.player_name}')
+        response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'Received from Server: {response} as type: {type(response)}')
         if response != 'false':
             new = dict(self.data).copy()
@@ -82,7 +89,7 @@ class Idleize(App):
         thread.start()
         return thread
     def send(self, item):
-        self.client.sendall(item.encode('utf-8'))
+        client.sendall(json.dumps((item)).encode('utf-8'))
         if self.idling: self.idling = False
         else: self.idling = True
         print(f'self.idling = {self.idling}')
@@ -92,10 +99,10 @@ class Idleize(App):
             new[self.item] = 0
             self.data = new
     def sync(self):
-        self.client.sendall('sync'.encode('utf-8'))
-        response = json.loads(self.client.recv(1024).decode('utf-8'))
+        client.sendall(json.dumps(['sync']).encode('utf-8'))
+        response = json.loads(client.recv(1024).decode('utf-8'))
         print(response)
-        for row in response:
+        for row in response[0]:
             new = dict(self.data).copy()
             new[row[0]] = row[1]
             self.data = new

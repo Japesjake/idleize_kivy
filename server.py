@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1235
+port = 1234
 
 idle_threads = []
 connections = []
@@ -24,7 +24,7 @@ items = [item[0] for item in items]
 class Server():
     def __init__(self):
         pass
-    def handle_client(self, conn, addr, username):
+    def handle_client(self, conn, addr):
         """Function to handle individual client communication."""
         print(f"[NEW CONNECTION] {addr} connected.")
         try:
@@ -33,17 +33,30 @@ class Server():
         except sqlite3.Error: print('error connecting to database')
         try:
             while True:
-                data = conn.recv(1024).decode('utf-8')
+                data = json.loads(conn.recv(1024).decode('utf-8'))
                 if not data:
                     break
                 print(f"[{addr}] says: {data}")
-                if data == 'sync':
+                if len(data) == 2:
+                    username = data[0]
+                    password = data[1]
+                    print(f'received username: {username} password: {password} from client')
+                    for connection in connections:
+                        if connection.conn == conn and connection.addr == addr:
+                            connection.username = username
+                            connection.password = password
+                            conn.sendall(json.dumps(['good']).encode('utf-8'))
+                        else:
+                            conn.sendall(json.dumps(['bad']).encode('utf-8'))
+                if data[0] == 'sync':
                     sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
                     cursor.execute(sql,(username,))
                     msg = cursor.fetchall()
                     print(f'data sent to client: {msg}')
-                    conn.sendall(json.dumps(msg).encode('utf-8'))
+                    conn.sendall(json.dumps([msg]).encode('utf-8'))
+                print(f'item received that looks like {data}')
                 if data in items:
+                    print('found item.')
                     conflict = False
                     for connection in connections:
                         for idle_thread in idle_threads:
@@ -57,7 +70,7 @@ class Server():
                         idle_thread = Idle_thread(username, data)
                         idle_threads.append(idle_thread)
                         idle_thread.thread.start()
-                    
+                    print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
         except ConnectionResetError:
             pass
         finally:
@@ -75,30 +88,22 @@ class Server():
         while True:
             # Wait for a new connection (blocking call)
             conn, addr = server.accept()
-            username = conn.recv(1024).decode('utf-8')
-            print(f'username received: {username}')
-            # cursor.execute('SELECT name FROM Player WHERE name = ?',(username,))
-            # check_username = cursor.fetchall()
-            # if not check_username:
-            cursor.execute('INSERT OR IGNORE INTO Player (name) VALUES (?)',(username,))
-            sql_conn.commit()
-
+            ## Starts a new connection thread ##
+            thread = threading.Thread(target=self.handle_client, args=(conn, addr))
+            connection = Connection(conn, addr, thread)
+            connections.append(connection)
+            connection.thread.start()
             ## checks for relevant running threads then send info to client ##
             conflict = False
             if idle_threads:
                 for idle_thread in idle_threads:
-                    if idle_thread.username == username:
-                        conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
-                        print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
-                        conflict = True
+                    for connection in connections:
+                        if idle_thread.username == connection.username:
+                            conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
+                            print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
+                            conflict = True
             if not conflict:
                 conn.sendall(json.dumps('false').encode('utf-8'))
-            ## Starts a new connection thread ##
-            thread = threading.Thread(target=self.handle_client, args=(conn, addr, username))
-            connection = Connection(conn, addr, username, thread)
-            connections.append(connection)
-            connection.thread.start()
-            print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
 
 class Idle_thread():
     def __init__(self, username, item):
@@ -106,7 +111,7 @@ class Idle_thread():
         self.username = username
         self.item = item
         self.count = 15
-        self.thread = threading.Thread(target=self.idle_loop)
+        self.thread = threading.Thread(target = self.idle_loop)
     def idle_loop(self):
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
@@ -150,11 +155,21 @@ class Idle_thread():
         idle_threads.remove(self)
         sql_conn.close()
 class Connection():
-    def __init__(self, conn, addr, username, thread):
+    def __init__(self, conn, addr, thread):
         self.conn = conn
         self.addr = addr
-        self.username = username
         self.thread = thread
+        self.sql_conn = sqlite3.connect('data.db')
+        self.cursor = sql_conn.cursor()
+    def assign_credentials(self, username, password):
+        self.cursor.execute("SELECT username, password FROM Player WHERE Player.name = ?",(username,))
+        exists = cursor.fetchall()
+        print(f'exists {exists}')
+        if exists:
+            pass
+            # cursor.execute("SELECT name, password FROM Player")
+        
+
 
 if __name__ == "__main__":
     server = Server()
