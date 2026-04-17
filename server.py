@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1234
+port = 1235
 
 idle_threads = []
 connections = []
@@ -52,13 +52,16 @@ class Server():
                             cursor.execute("SELECT name, password FROM Player WHERE name = ?",(username,))
                             credentials = cursor.fetchall()
                             if credentials and credentials[0][0] == username and credentials[0][1] == password:
-                                # conn.sendall(json.dumps('good').encode('utf-8'))
-                                pass
+                                conn.sendall(json.dumps(['good']).encode('utf-8'))
                             if not credentials:
                                 print(f'no player found. Creating player with credentials')
-                                # conn.sendall(json.dumps(['new']).encode('utf-8'))
+                                conn.sendall(json.dumps(['new']).encode('utf-8'))
                                 cursor.execute("INSERT INTO Player (name, password) VALUES (?, ?)",(username, password))
                                 sql_connection.commit()
+                    ### this sends too fast ###
+                    # time.sleep(0.5)
+                    response = json.loads(conn.recv(1024).decode())
+                    print(f'response from client: {response}')
                     self.sync(username, conn)
                 if data[0] == 'sync':
                     self.sync(username, conn)
@@ -116,7 +119,7 @@ class Server():
         sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
         cursor.execute(sql,(username,))
         msg = cursor.fetchall()
-        print(f'data sent to client: {msg}')
+        print(f'data sent to client: {msg} as {type(msg)}')
         conn.sendall(json.dumps(msg).encode('utf-8'))
 class Idle_thread():
     def __init__(self, username, item, conn, addr):

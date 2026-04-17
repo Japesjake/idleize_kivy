@@ -6,7 +6,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1234
+PORT = 1235
 
 files = Path('relationships.p')
 if not files.is_file():
@@ -24,13 +24,25 @@ Builder.load_file('main.kv')
 class LoginScreen(Screen):
     def verify_credentials(self):
         print('credentials sent')
+        global username
+        global password
         username = self.ids.username.text
         password = self.ids.password.text
         client.sendall(json.dumps((username, password)).encode('utf-8'))
-        response = client.recv(1024).decode('utf-8')
+        response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'response: {response}')
-        # response = json.loads()
+        client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
+        # if 'good' in response:
+        #     print('good')
+        # response = response.strip('good')
+        response = json.loads(client.recv(1024).decode('utf-8'))
+        print(f'response from server {type(response)} as {response}')
+        for row in response:
+            new = dict(App.get_running_app().data).copy()
+            new[row[0]] = row[1]
+            App.get_running_app().data = new
         self.manager.current = 'main'
+
 class MainLayout(Screen):
     pass
 class WindowManager(ScreenManager):
@@ -100,11 +112,12 @@ class Idleize(App):
     def sync(self):
         client.sendall(json.dumps(['sync']).encode('utf-8'))
         response = json.loads(client.recv(1024).decode('utf-8'))
-        print(response)
-        for row in response[0]:
-            new = dict(self.data).copy()
-            new[row[0]] = row[1]
-            self.data = new
+        print(f'Data received from server {response}')
+        if response:
+            for row in response:
+                new = dict(self.data).copy()
+                new[row[0]] = row[1]
+                self.data = new
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
