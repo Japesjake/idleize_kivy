@@ -6,18 +6,20 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1235
+PORT = 1234
 
 files = Path('relationships.p')
 if not files.is_file():
     with open('relationships.p', 'wb') as file:
         pickle.dump({'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore'}, file)
 
-files = Path('data.p')
-if not files.is_file():
+def create_new_data():
     with open('data.p', 'wb') as file:
         pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
 
+files = Path('data.p')
+if not files.is_file():
+    create_new_data()
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 Builder.load_file('main.kv')
@@ -32,15 +34,18 @@ class LoginScreen(Screen):
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'response: {response}')
         client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
-        # if 'good' in response:
-        #     print('good')
-        # response = response.strip('good')
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'response from server {type(response)} as {response}')
-        for row in response:
-            new = dict(App.get_running_app().data).copy()
-            new[row[0]] = row[1]
-            App.get_running_app().data = new
+        if response:
+            for row in response:
+                new = dict(App.get_running_app().data).copy()
+                new[row[0]] = row[1]
+                App.get_running_app().data = new
+                print(f'dictionary saved: {App.get_running_app().data}')
+        else:
+            create_new_data()
+            with open('data.p', 'rb') as file:
+                App.get_running_app().data = DictProperty(pickle.load(file))
         self.manager.current = 'main'
 
 class MainLayout(Screen):
