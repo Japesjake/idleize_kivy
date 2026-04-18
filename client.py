@@ -24,28 +24,10 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 Builder.load_file('main.kv')
 class LoginScreen(Screen):
-    def verify_credentials(self):
-        print('credentials sent')
-        global username
-        global password
+    def verify(self):
         username = self.ids.username.text
         password = self.ids.password.text
-        client.sendall(json.dumps((username, password)).encode('utf-8'))
-        response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'response: {response}')
-        client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
-        response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'response from server {type(response)} as {response}')
-        if response:
-            for row in response:
-                new = dict(App.get_running_app().data).copy()
-                new[row[0]] = row[1]
-                App.get_running_app().data = new
-                print(f'dictionary saved: {App.get_running_app().data}')
-        else:
-            create_new_data()
-            with open('data.p', 'rb') as file:
-                App.get_running_app().data = DictProperty(pickle.load(file))
+        App.get_running_app().verify_credentials(username, password)
         self.manager.current = 'main'
 
 class MainLayout(Screen):
@@ -123,6 +105,24 @@ class Idleize(App):
                 new = dict(self.data).copy()
                 new[row[0]] = row[1]
                 self.data = new
+    def verify_credentials(self, username, password):
+        print('credentials sent')
+        client.sendall(json.dumps((username, password)).encode('utf-8'))
+        response = json.loads(client.recv(1024).decode('utf-8'))
+        print(f'response: {response}')
+        client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
+        response = json.loads(client.recv(1024).decode('utf-8'))
+        print(f'response from server {type(response)} as {response}')
+        if response:
+            for row in response:
+                new = dict(self.data).copy()
+                new[row[0]] = row[1]
+                self.data = new
+                print(f'dictionary saved: {App.get_running_app().data}')
+        else:
+            create_new_data()
+            with open('data.p', 'rb') as file:
+                self.data = pickle.load(file)
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
