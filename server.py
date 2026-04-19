@@ -133,15 +133,22 @@ class Idle_thread():
         cursor = sql_conn.cursor()
         while self.idling:
             time.sleep(1)
+            sql = "SELECT 1 FROM Item WHERE item_name = ? AND crafts_from_item_id IS NOT NULL;"
+            cursor.execute(sql,(self.item,))
+            has_child = cursor.fetchone()
+
+
             sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE Player.name = ?)"
             cursor.execute(sql, (self.item, self.username))
             child_count = cursor.fetchall()
             print(f'child_count: {child_count}')
-
-            if not child_count:
+            if not has_child:
                 sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
                 cursor.execute(sql,(self.item,self.username))
                 sql_conn.commit()
+
+            elif has_child and not child_count:
+                pass
             else:
                 child_count = child_count[0][0]
                 if child_count > 0:
