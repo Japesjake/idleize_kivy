@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1234
+port = 1235
 
 idle_threads = []
 connections = []
@@ -58,8 +58,18 @@ class Server():
                                 conn.sendall(json.dumps(['new']).encode('utf-8'))
                                 cursor.execute("INSERT INTO Player (name, password) VALUES (?, ?)",(username, password))
                                 sql_connection.commit()
-                    ### this sends too fast ###
-                    # time.sleep(0.5)
+                    ## checks for relevant running threads then send info to client ##
+                    conflict = False
+                    if idle_threads:
+                        for idle_thread in idle_threads:
+                            if idle_thread.username == username:
+                                conflict = True
+                    if conflict:
+                        conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
+                        print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
+                    else:
+                        print(f'no conflict sent to client: false')
+                        conn.sendall(json.dumps('false').encode('utf-8'))
                     response = json.loads(conn.recv(1024).decode())
                     print(f'response from client: {response}')
                     self.sync(username, conn)
@@ -69,17 +79,16 @@ class Server():
                     conflict = False
                     for connection in connections:
                         for idle_thread in idle_threads:
-                            if connection.conn == idle_thread.conn and idle_thread.idling:
-                                print('There is a conflict. Ending loop.')
+                            if idle_thread.username == username and idle_thread.idling:
+                                print(f'There is a conflict on username: {connection.username}')
                                 conflict = True
                                 idle_thread.idling = False
-                                print(f'There are {len(idle_threads)} idle threads active.')
                     if not conflict:
                         print('No conflict. Adding idle_thread...')
                         idle_thread = Idle_thread(username, data, conn, addr)
                         idle_threads.append(idle_thread)
                         idle_thread.thread.start()
-                    print(f"[ACTIVE THREADS] {threading.active_count() - 1}")
+            
         except ConnectionResetError:
             pass
         finally:
@@ -102,24 +111,13 @@ class Server():
             connection = Connection(conn, addr, thread)
             connections.append(connection)
             connection.thread.start()
-            ## checks for relevant running threads then send info to client ##
-            conflict = False
-            if idle_threads:
-                for idle_thread in idle_threads:
-                    for connection in connections:
-                        if idle_thread.addr == connection.addr:
-                            conn.sendall(json.dumps((idle_thread.item,idle_thread.count)).encode('utf-8'))
-                            print(f'Threading info sent to client: ({idle_thread.item},{idle_thread.count})')
-                            conflict = True
-            if not conflict:
-                conn.sendall(json.dumps('false').encode('utf-8'))
     def sync(self, username, conn):
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
         sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
         cursor.execute(sql,(username,))
         msg = cursor.fetchall()
-        print(f'data sent to client: {msg} as {type(msg)}')
+        print(f'data sent to client: {msg}')
         conn.sendall(json.dumps(msg).encode('utf-8'))
 class Idle_thread():
     def __init__(self, username, item, conn, addr):
@@ -129,11 +127,10 @@ class Idle_thread():
         self.count = 15
         self.conn = conn
         self.addr = addr
-        self.thread = threading.Thread(target=self.idle_loop, args=(self.conn, self.addr))
-    def idle_loop(self, conn, addr):
+        self.thread = threading.Thread(target=self.idle_loop, args=(self.conn, self.addr, self.username))
+    def idle_loop(self, conn, addr, username):
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
-        print('idling...')
         while self.idling:
             time.sleep(1)
             sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE Player.name = ?)"

@@ -6,7 +6,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1234
+PORT = 1235
 
 files = Path('relationships.p')
 if not files.is_file():
@@ -48,21 +48,6 @@ class Idleize(App):
     def build(self):
         self.main = WindowManager()
         client.connect((HOST, PORT))
-        # client.sendall(self.player_name.encode('utf-8'))
-        # print(f'Sent to server: {self.player_name}')
-        response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'Received from Server: {response} as type: {type(response)}')
-        if response != 'false':
-            new = dict(self.data).copy()
-            self.item = response[0]
-            self.count = response[1]
-            new[self.item] = self.count
-            self.data = new
-            print(f'data on local client after receiving data: {self.data}')
-            self.idling = True
-        else: 
-            self.idling = False
-        self.start_idle_thread()
         return self.main
     def idle_thread(self):
         while True:
@@ -109,10 +94,28 @@ class Idleize(App):
         print('credentials sent')
         client.sendall(json.dumps((username, password)).encode('utf-8'))
         response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'response: {response}')
+        print(f'response after credentials sent: {response}')
         client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
+        
+        
+        ### Receives Data concerning idling process on server ###
         response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'response from server {type(response)} as {response}')
+        print(f'Received from Server after aknowledged sent: {response} as type: {type(response)}')
+        if response == 'false':
+            self.idling = False
+        else:
+            new = dict(self.data).copy()
+            self.item = response[0]
+            self.count = response[1]
+            new[self.item] = self.count
+            self.data = new
+            print(f'data on local client after receiving data: {self.data}')
+            self.idling = True
+        self.start_idle_thread()
+
+        #### saves sync data. Creates a new data.p file if no data on server ###
+        response = json.loads(client.recv(1024).decode('utf-8'))
+        print(f'Save data received from Server: {response}')
         if response:
             for row in response:
                 new = dict(self.data).copy()
@@ -123,6 +126,14 @@ class Idleize(App):
             create_new_data()
             with open('data.p', 'rb') as file:
                 self.data = pickle.load(file)
+                ############
+
+        
+        
+
+
+
+
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
