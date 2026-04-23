@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1234
+port = 1235
 
 idle_threads = []
 connections = []
@@ -142,22 +142,26 @@ class Idle_thread():
             cursor.execute(sql, (self.item, self.username))
             child_count = cursor.fetchall()
             print(f'child_count: {child_count}')
-            if not has_child:
+
+            sql = "SELECT crafts_from_amount FROM Item WHERE item_name = ?"
+            cursor.execute(sql, (self.item,))
+            amount = cursor.fetchall()[0][0]
+            if not amount:
                 sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
                 cursor.execute(sql,(self.item,self.username))
                 sql_conn.commit()
-            elif has_child and not child_count:
+            elif amount and not child_count:
                 pass
             else:
                 child_count = child_count[0][0]
-                if child_count > 0:
+                if child_count - amount >= 0:
                     print(f'child count when above 0: {child_count}')
                     sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
                     cursor.execute(sql,(self.item,self.username))
                     sql_conn.commit()
 
-                    sql = "UPDATE PlayerItem SET count = count - 1 FROM Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
-                    cursor.execute(sql,(self.item,self.username))
+                    sql = "UPDATE PlayerItem SET count = count - (SELECT crafts_from_amount FROM Item WHERE item_name = ?) FROM Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
+                    cursor.execute(sql,(self.item,self.item,self.username))
                     sql_conn.commit()
 
 
