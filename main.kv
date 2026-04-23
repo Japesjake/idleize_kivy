@@ -85,15 +85,18 @@
                 GridLayout:
                     cols: 2
                     Button:
-                        text: 'Copper Ingot: ' + '\n  ' + str(app.data['copper ingot'])
+                        text: 'Copper Ingot: ' + '\n' + str(app.data['copper ingot'])
                         on_press: app.send('copper ingot')
                     Button:
-                        text: 'Iron Ingot: ' + '\n  ' + str(app.data['iron ingot'])
+                        text: 'Iron Ingot: ' + '\n' + str(app.data['iron ingot'])
                         on_press: app.send('iron ingot')
             Screen:
                 name: 'Crafting'
-                Label:
-                    text: 'Crafting'
+                GridLayout:
+                    cols: 2
+                    Button:
+                        text: 'Copper Armor: ' + '\n' + str(app.data['copper armor'])
+                        on_press: app.send('copper armor')
             Screen:
                 name: 'Gathering'
                 Label:

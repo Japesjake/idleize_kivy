@@ -2,7 +2,7 @@ import socket
 import threading, time, sqlite3, json
 
 host = '0.0.0.0'
-port = 1235
+port = 1234
 
 idle_threads = []
 connections = []
@@ -14,8 +14,8 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-items = [('copper ore',None), ('iron ore',None), ('copper ingot','copper ore'), ('iron ingot', 'iron ore')]
-cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?))", items)
+items = [('copper ore',None,None), ('iron ore',None,None), ('copper ingot','copper ore',1), ('iron ingot', 'iron ore',1), ('copper armor', 'copper ingot',5), ('iron armor', 'iron ingot',5)]
+cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id, crafts_from_amount) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?), ?)", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
@@ -146,7 +146,6 @@ class Idle_thread():
                 sql = "UPDATE PlayerItem SET count = count + 1 FROM Item, Player WHERE PlayerItem.item_id = Item.item_id AND PlayerItem.player_id = Player.player_id AND Item.item_name = ? AND Player.name = ?;"
                 cursor.execute(sql,(self.item,self.username))
                 sql_conn.commit()
-
             elif has_child and not child_count:
                 pass
             else:

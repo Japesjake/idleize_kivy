@@ -6,16 +6,21 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 HOST = 'localhost'
-PORT = 1235
+PORT = 1234
+
+files = Path('amounts.p')
+if not files.is_file():
+    with open('amounts.p', 'wb') as file:
+        pickle.dump({'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5}, file)
 
 files = Path('relationships.p')
 if not files.is_file():
     with open('relationships.p', 'wb') as file:
-        pickle.dump({'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore'}, file)
+        pickle.dump({'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot'}, file)
 
 def create_new_data():
     with open('data.p', 'wb') as file:
-        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0}, file)
+        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0}, file)
 
 files = Path('data.p')
 if not files.is_file():
@@ -25,8 +30,10 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 Builder.load_file('main.kv')
 class LoginScreen(Screen):
     def verify(self):
-        username = self.ids.username.text
-        password = self.ids.password.text
+        # username = self.ids.username.text
+        # password = self.ids.password.text
+        username = 'JpJab'
+        password = 'password'
         App.get_running_app().verify_credentials(username, password)
         self.manager.current = 'main'
 
@@ -42,6 +49,8 @@ class Idleize(App):
         data = DictProperty(pickle.load(file))
     with open('relationships.p', 'rb') as file:
         relationships = DictProperty(pickle.load(file))
+    with open('amounts.p', 'rb') as file:
+        amounts = pickle.load(file)
     player_name = 'JpJab'
     item = 'item'
     idling = False
@@ -55,16 +64,16 @@ class Idleize(App):
                 time.sleep(1)
                 print(self.item)
                 child_item = self.relationships[self.item]
-                if not child_item or self.data[child_item] > 0:
+                if not child_item or self.data[child_item] - self.amounts[self.item] > 0:
                     print('idling...')
                     new = dict(self.data).copy()
                     new[self.item] += 1
                     self.data = new
-                if child_item and self.data[child_item] > 0:
+                if child_item and self.data[child_item] - self.amounts[self.item] > 0:
                     print(f'subtracting 1 from {child_item}')
                     print(f'child item count: {self.data[child_item]}')
                     new = dict(self.data).copy()
-                    new[child_item] -= 1
+                    new[child_item] -= self.amounts[self.item]
                     self.data = new
     def start_idle_thread(self):
         thread = threading.Thread(target=self.idle_thread, daemon=True)
@@ -126,12 +135,9 @@ class Idleize(App):
             create_new_data()
             with open('data.p', 'rb') as file:
                 self.data = pickle.load(file)
-                ############
 
-        
-        
-
-
+    # def on_start(self):
+    #     LoginScreen.verify(self)
 
 
     def on_stop(self):
