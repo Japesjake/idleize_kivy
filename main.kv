@@ -1,5 +1,21 @@
 
 #:import NoTransition kivy.uix.screenmanager.NoTransition
+<ThickProgressBar>:
+    thickness: '20dp'
+    canvas:
+        # Background bar
+        Color:
+            rgb: 0.5, 0.5, 0.5
+        RoundedRectangle:
+            pos: self.pos
+            size: self.width, self.height
+        # Progress bar (the filling part)
+        Color:
+            rgb: 0, 1, 0  # Green
+        RoundedRectangle:
+            pos: self.pos
+            size: (self.width * (self.value / float(self.max))) if self.max else 0, self.height
+
 <WindowManager>:
     LoginScreen:
     MainLayout:
@@ -58,53 +74,58 @@
                 on_press: app.sync()
                 
         # Right Panel - Content Area
-        ScreenManager:
-            id: sm
-            transition: NoTransition()
-            Screen:
-                name: 'Mining'
-                GridLayout:
-                    cols: 2
-                    Button:
-                        text: 'Copper Ore: ' + '\n  ' + str(app.data['copper ore'])
-                        on_press: app.send('copper ore')
-                    Button:
-                        text: 'Iron Ore: ' + '\n  ' + str(app.data['iron ore'])
-                        on_press: app.send('iron ore')
-            Screen:
-                name: 'Character'
-                Label:
-                    text: 'Character'
+        BoxLayout:
+            orientation: 'vertical'
+            ScreenManager:
+                id: sm
+                transition: NoTransition()
+                Screen:
+                    name: 'Mining'
+                    GridLayout:
+                        cols: 2
+                        Button:
+                            text: 'Copper Ore: ' + '\n  ' + str(app.data['copper ore'])
+                            on_press: app.send('copper ore')
+                        Button:
+                            text: 'Iron Ore: ' + '\n  ' + str(app.data['iron ore'])
+                            on_press: app.send('iron ore')
+                Screen:
+                    name: 'Character'
+                    Label:
+                        text: 'Character'
 
-            Screen:
-                name: 'Combat'
-                Label:
-                    text: 'Combat'
-            Screen:
-                name: 'Smelting'
-                GridLayout:
-                    cols: 2
-                    Button:
-                        text: 'Copper Ingot: ' + '\n' + str(app.data['copper ingot'])
-                        on_press: app.send('copper ingot')
-                    Button:
-                        text: 'Iron Ingot: ' + '\n' + str(app.data['iron ingot'])
-                        on_press: app.send('iron ingot')
-            Screen:
-                name: 'Crafting'
-                GridLayout:
-                    cols: 2
-                    Button:
-                        text: 'Copper Armor: ' + '\n' + str(app.data['copper armor'])
-                        on_press: app.send('copper armor')
-                    Button:
-                        text: 'Iron Armor: ' + '\n' + str(app.data['iron armor'])
-                        on_press: app.send('iron armor')
-            Screen:
-                name: 'Gathering'
-                Label:
-                    text: 'Gathering'
-            Screen:
-                name: 'Cooking'
-                Label:
-                    text: 'Cooking'
+                Screen:
+                    name: 'Combat'
+                    Label:
+                        text: 'Combat'
+                Screen:
+                    name: 'Smelting'
+                    GridLayout:
+                        cols: 2
+                        Button:
+                            text: 'Copper Ingot: ' + '\n' + str(app.data['copper ingot'])
+                            on_press: app.send('copper ingot')
+                        Button:
+                            text: 'Iron Ingot: ' + '\n' + str(app.data['iron ingot'])
+                            on_press: app.send('iron ingot')
+                Screen:
+                    name: 'Crafting'
+                    GridLayout:
+                        cols: 2
+                        Button:
+                            text: 'Copper Armor: ' + '\n' + str(app.data['copper armor'])
+                            on_press: app.send('copper armor')
+                        Button:
+                            text: 'Iron Armor: ' + '\n' + str(app.data['iron armor'])
+                            on_press: app.send('iron armor')
+                Screen:
+                    name: 'Gathering'
+                    Label:
+                        text: 'Gathering'
+                Screen:
+                    name: 'Cooking'
+                    Label:
+                        text: 'Cooking'
+            ThickProgressBar:
+                id: pb
+                size_hint_y: None
