@@ -81,6 +81,8 @@
                 transition: NoTransition()
                 Screen:
                     name: 'Mining'
+                    Label:
+                        text: 'xp: ' + str(app.xps['mining'])
                     GridLayout:
                         cols: 2
                         Button:
@@ -128,4 +130,5 @@
                         text: 'Cooking'
             ThickProgressBar:
                 id: pb
+                value: 0
                 size_hint_y: None

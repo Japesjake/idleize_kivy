@@ -35,6 +35,12 @@ if not files.is_file():
     with open('groups.p','wb') as file:
         pickle.dump({'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor')}, file)
 
+files = Path('xp_values.p')
+if not files.is_file():
+    with open('xp_values.p','wb') as file:
+        pickle.dump({'copper ore': 1, 'iron ore': 1, 'copper ingot': 1, 'iron ingot': 1, 'copper armor': 1, 'iron armor': 1}, file)
+
+
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 Builder.load_file('main.kv')
@@ -49,9 +55,8 @@ class LoginScreen(Screen):
 class ThickProgressBar(ProgressBar):
     pass
 class MainLayout(Screen):
-    def animate(self):
+    def animate(self, duration):
         self.ids.pb.value = 0
-        duration = App.get_running_app().get_duration()
         anim = Animation(value=100, duration=duration)
         anim.start(self.ids.pb)
 class WindowManager(ScreenManager):
@@ -68,6 +73,10 @@ class Idleize(App):
         amounts = pickle.load(file)
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
+    with open('groups.p', 'rb') as file:
+        groups = pickle.load(file)
+    with open('xp_values.p', 'rb') as file:
+        xp_values = pickle.load(file)
     player_name = 'JpJab'
     item = 'item'
     idling = False
@@ -78,17 +87,25 @@ class Idleize(App):
     def idle_thread(self):
         while True:
             while self.idling:
-                self.root.get_screen('main').animate()
                 time.sleep(1)
+                for key, value in self.groups.items():
+                    if self.item in value:
+                        xp_group = key
+                        break               
+                duration = self.get_duration(xp_group)
+                self.root.get_screen('main').animate(duration)
                 child_item = self.relationships[self.item]
                 if not child_item or self.data[child_item] - self.amounts[self.item] >= 0:
-                    print('idling...')
                     new = dict(self.data).copy()
                     new[self.item] += 1
                     self.data = new
                     print(f'{self.item}: {self.data[self.item]}')
+                    ### adds xp ###
+                    new = dict(self.xps).copy()
+                    new[xp_group] += self.xp_values[self.item]
+                    self.xps = new
+                    print(f'XP added to {xp_group} total amount {self.xps[xp_group]}')
                 if child_item and self.data[child_item] - self.amounts[self.item] >= 0:
-                    print(f'subtracting 1 from {child_item}')
                     print(f'child item count: {self.data[child_item]}')
                     new = dict(self.data).copy()
                     new[child_item] -= self.amounts[self.item]
@@ -155,7 +172,7 @@ class Idleize(App):
             with open('xps.p', 'wb') as file:
                 pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0})
 
-    def get_duration(self):
+    def get_duration(self, xp_group):
         return 1
     def on_stop(self):
         with open('data.p', "wb") as file:
