@@ -7,6 +7,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import socket, pickle, json, time, threading
 from pathlib import Path
 from kivy.animation import Animation
+from kivy.clock import Clock
 HOST = 'localhost'
 PORT = 1235
 
@@ -38,8 +39,12 @@ if not files.is_file():
 files = Path('xp_values.p')
 if not files.is_file():
     with open('xp_values.p','wb') as file:
-        pickle.dump({'copper ore': 1, 'iron ore': 1, 'copper ingot': 1, 'iron ingot': 1, 'copper armor': 1, 'iron armor': 1}, file)
+        pickle.dump({'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2}, file)
 
+files = Path('difficulties.p')
+if not files.is_file():
+    with open ('difficulties.p','wb') as file:
+        pickle.dump({'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron Armor': 500}, file)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -77,8 +82,10 @@ class Idleize(App):
         groups = pickle.load(file)
     with open('xp_values.p', 'rb') as file:
         xp_values = pickle.load(file)
+    with open('difficulties.p', 'rb') as file:
+        difficulties = pickle.load(file)
     player_name = 'JpJab'
-    item = 'item'
+    item = 'copper ore'
     idling = False
     def build(self):
         self.main = WindowManager()
@@ -87,29 +94,35 @@ class Idleize(App):
     def idle_thread(self):
         while True:
             while self.idling:
-                time.sleep(1)
+                item = self.item
                 for key, value in self.groups.items():
-                    if self.item in value:
+                    if item in value:
                         xp_group = key
-                        break               
-                duration = self.get_duration(xp_group)
-                self.root.get_screen('main').animate(duration)
-                child_item = self.relationships[self.item]
-                if not child_item or self.data[child_item] - self.amounts[self.item] >= 0:
-                    new = dict(self.data).copy()
-                    new[self.item] += 1
-                    self.data = new
-                    print(f'{self.item}: {self.data[self.item]}')
-                    ### adds xp ###
-                    new = dict(self.xps).copy()
-                    new[xp_group] += self.xp_values[self.item]
-                    self.xps = new
-                    print(f'XP added to {xp_group} total amount {self.xps[xp_group]}')
-                if child_item and self.data[child_item] - self.amounts[self.item] >= 0:
-                    print(f'child item count: {self.data[child_item]}')
-                    new = dict(self.data).copy()
-                    new[child_item] -= self.amounts[self.item]
-                    self.data = new
+                        break                    
+                duration = self.get_duration(xp_group, item)
+                child_item = self.relationships.get(item)
+                required = self.amounts.get(item, 0)
+                has_mats = not child_item or (self.data.get(child_item, 0) >= required)
+                if has_mats:
+                    Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(duration))
+                    time.sleep(duration)
+                    if self.idling and item == self.item:
+                        def update(dt):
+                            new_data = dict(self.data)
+                            new_data[item] += 1
+                            if child_item:
+                                new_data[child_item] -= required
+                            self.data = new_data
+                            
+                            new_xp = dict(self.xps)
+                            new_xp[xp_group] += self.xp_values.get(item, 0)
+                            self.xps = new_xp
+                            print(f'{item}: {self.data.get(item)}')
+                            print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
+                        Clock.schedule_once(update)
+                else:
+                    print('Missing materials!')
+                    self.idling = False
     def start_idle_thread(self):
         thread = threading.Thread(target=self.idle_thread, daemon=True)
         print(f'thread started.')
@@ -117,14 +130,15 @@ class Idleize(App):
         return thread
     def send(self, item):
         client.sendall(json.dumps((item)).encode('utf-8'))
-        if self.idling: self.idling = False
-        else: self.idling = True
-        print(f'self.idling = {self.idling}')
-        self.item = item
-        if self.item not in self.data.keys():
-            new = dict(self.data).copy()
-            new[self.item] = 0
-            self.data = new
+        if self.item != item:
+            self.idling = False
+            self.item = item
+            self.idling = True
+            main_screen = self.root.get_screen('main')
+            Animation.stop_all(main_screen.ids.pb)
+            main_screen.ids.pb.value = 0
+        else:
+            self.idling = not self.idling
     def sync(self):
         client.sendall(json.dumps(['sync']).encode('utf-8'))
         response = json.loads(client.recv(1024).decode('utf-8'))
@@ -170,10 +184,13 @@ class Idleize(App):
             with open('data.p', 'wb') as file:
                 pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0}, file)
             with open('xps.p', 'wb') as file:
-                pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0})
+                pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0}, file)
 
-    def get_duration(self, xp_group):
-        return 1
+    def get_duration(self, group, item):
+        duration = self.difficulties[item] / (self.xps[group] + 1)
+        if duration <= 1:
+            duration = 1
+        return duration
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
