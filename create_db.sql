@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS Item (
     item_name VARCHAR(255) NOT NULL UNIQUE,
     crafts_from_item_id INT,
     crafts_from_amount INT,
-    FOREIGN KEY (crafts_from_item_id) REFERENCES Item(item_id)
+    category_id INT,
+    FOREIGN KEY (crafts_from_item_id) REFERENCES Item(item_id),
+    FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
 CREATE TABLE IF NOT EXISTS PlayerItem (
@@ -20,4 +22,17 @@ CREATE TABLE IF NOT EXISTS PlayerItem (
     PRIMARY KEY (player_id, item_id),
     FOREIGN KEY (player_id) REFERENCES Player(player_id),
     FOREIGN KEY (item_id) REFERENCES Item(item_id)
+);
+
+CREATE TABLE IF NOT EXISTS Category (
+    category_id INTEGER PRIMARY KEY,
+    category_name VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS PlayerCategory (
+    player_id INT NOT NULL,
+    category_id INT NOT NULL,
+    xp INT DEFAULT 0,
+    FOREIGN KEY (player_id) REFERENCES Player(player_id),
+    FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );

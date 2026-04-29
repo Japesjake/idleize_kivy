@@ -14,8 +14,13 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-items = [('copper ore',None,None), ('iron ore',None,None), ('copper ingot','copper ore',1), ('iron ingot', 'iron ore',1), ('copper armor', 'copper ingot',5), ('iron armor', 'iron ingot',5)]
-cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id, crafts_from_amount) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?), ?)", items)
+categories = [('mining',), ('smelting',), ('crafting',)]
+sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
+cursor.executemany(sql, categories)
+sql_conn.commit()
+
+items = [('copper ore',None,None,'mining'), ('iron ore',None,None,'mining'), ('copper ingot','copper ore',1, 'smelting'), ('iron ingot', 'iron ore',1,'smelting'), ('copper armor', 'copper ingot',5,'crafting'), ('iron armor', 'iron ingot',5,'crafting')]
+cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id, crafts_from_amount, category_id) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?), ?, (SELECT category_id FROM Category WHERE category_name = ?))", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
@@ -96,6 +101,7 @@ class Server():
             print(f"[DISCONNECTED] {addr} closed.")
     def start_server(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((host, port))
         server.listen()
         print(f"[LISTENING] Server is listening on localhost: {port}")
