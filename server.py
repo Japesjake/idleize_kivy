@@ -81,18 +81,26 @@ class Server():
                 if data[0] == 'sync':
                     self.sync(username, conn)
                 if data in items:
-                    conflict = False
-                    for connection in connections:
-                        for idle_thread in idle_threads:
-                            if idle_thread.username == username and idle_thread.idling:
-                                print(f'There is a conflict on username: {connection.username}')
-                                conflict = True
-                                idle_thread.idling = False
-                    if not conflict:
-                        print('No conflict. Adding idle_thread...')
-                        idle_thread = Idle_thread(username, data, conn, addr)
-                        idle_threads.append(idle_thread)
-                        idle_thread.thread.start()
+                    current_conn_obj = next((c for c in connections if c.conn == conn), None)
+                    if current_conn_obj:
+                        current_conn_obj.stop_current_task()
+                        print(f'Starting new thread: {data} for {username}')
+                        new_task = Idle_thread(username, data, conn, addr)
+                        current_conn_obj.active_idle_thread = new_task
+                        new_task.thread.start()
+
+                    # conflict = False
+                    # for connection in connections:
+                    #     for idle_thread in idle_threads:
+                    #         if idle_thread.username == username and idle_thread.idling:
+                    #             print(f'There is a conflict on username: {connection.username}')
+                    #             conflict = True
+                    #             idle_thread.idling = False
+                    # if not conflict:
+                    #     print('No conflict. Adding idle_thread...')
+                    #     idle_thread = Idle_thread(username, data, conn, addr)
+                    #     idle_threads.append(idle_thread)
+                    #     idle_thread.thread.start()
             
         except ConnectionResetError:
             pass
@@ -190,6 +198,15 @@ class Connection():
         self.conn = conn
         self.addr = addr
         self.thread = thread
+        self.username = None
+        self.password = None
+        self.active_idle_thread = None # Store the thread here
+
+    def stop_current_task(self):
+        if self.active_idle_thread:
+            print(f"Stopping task: {self.active_idle_thread.item} for {self.username}")
+            self.active_idle_thread.idling = False
+            self.active_idle_thread = None
         
 
 
