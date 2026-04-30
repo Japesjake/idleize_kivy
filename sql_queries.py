@@ -5,7 +5,11 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
-sql = ""
+sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = 'copper ore' AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = 'JpJab')"
+sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item INNER JOIN PlayerXP ON Item.item_id = PlayerXP.item_id"
+cursor.execute(sql)
+difficulty, xp = cursor.fetchone()
+
 
 # sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE Player.name = ?)"
 # cursor.execute(sql, ('copper ingot', 'JpJab'))
