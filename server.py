@@ -121,9 +121,15 @@ class Server():
     def sync(self, username, conn):
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
+
         sql = "SELECT Item.item_name, count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ?;"
         cursor.execute(sql,(username,))
-        msg = cursor.fetchall()
+        inventory = cursor.fetchall()
+
+        sql = "SELECT Category.category_name, PlayerXP.xp FROM PlayerXP JOIN Category ON PlayerXP.category_id = Category.category_id JOIN Player ON PlayerXP.player_id = Player.player_id WHERE Player.name = ?"
+        cursor.execute(sql, (username,))
+        experience = cursor.fetchall()
+        msg = {"inventory": inventory, "experience": experience}
         print(f'data sent to client: {msg}')
         conn.sendall(json.dumps(msg).encode('utf-8'))
 class Idle_thread():
@@ -139,6 +145,7 @@ class Idle_thread():
         sql_conn = sqlite3.connect('data.db')
         cursor = sql_conn.cursor()
         while self.idling:
+            current_item = self.item
             sql = "SELECT Category.category_id FROM Category, Item WHERE Category.category_id = (SELECT category_id FROM Item WHERE Item.category_id = Category.category_id AND Item.item_name = ?)"
             cursor.execute(sql, (self.item,))
             category_id = cursor.fetchone()[0]
@@ -158,7 +165,13 @@ class Idle_thread():
             duration = difficulty / (xp + 1)
             if duration < 1: duration = 1
             print(f'Time until reward: {duration}')
-            time.sleep(duration)
+            # time.sleep(duration)
+            elapsed = 0
+            while elapsed < duration:
+                if not self.idling or current_item != self.item:
+                    return
+                time.sleep(0.1)
+                elapsed += 0.1
 
             if self.idling:
                 sql = "SELECT 1 FROM Item WHERE item_name = ? AND crafts_from_item_id IS NOT NULL;"

@@ -144,10 +144,15 @@ class Idleize(App):
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'Data received from server {response}')
         if response:
-            for row in response:
-                new = dict(self.data).copy()
-                new[row[0]] = row[1]
-                self.data = new
+            new = dict(self.data)
+            for item_name, count in response.get('inventory', []):
+                new[item_name] = count
+            self.data = new
+
+            new = dict(self.xps)
+            for category_name, xp_value in response.get('experience', []):
+                new[category_name] = xp_value
+            self.xps = new
     def verify_credentials(self, username, password):
         print('credentials sent')
         client.sendall(json.dumps((username, password)).encode('utf-8'))
