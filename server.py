@@ -192,18 +192,19 @@ class Idle_thread():
                         cursor.execute(sql,(self.item,self.item,self.username))
                         sql_conn.commit()
 
-                        sql = "SELECT xp_reward FROM Item WHERE item_name = ?"
-                        cursor.execute(sql, (self.item))
-                        xp_reward = cursor.fetchone()
+                sql = "SELECT xp_reward FROM Item WHERE item_name = ?"
+                cursor.execute(sql, (self.item,))
+                xp_reward = cursor.fetchone()[0]
+                print(xp_reward)
 
-                        ### adds XP ###
-                        sql = "UPDATE PlayerXP SET xp + ? WHERE category_id = ? AND player_id = (SELECT player_id FROM Player WHERE name = ?)"
-                        cursor.execute(sql, (xp_reward, category_id, username))
-                        sql_conn.commit()
+                ### adds XP ###
+                sql = "UPDATE PlayerXP SET xp = xp + ? WHERE category_id = ? AND player_id = (SELECT player_id FROM Player WHERE name = ?)"
+                cursor.execute(sql, (xp_reward, category_id, username))
+                sql_conn.commit()
 
-                        sql = "SELECT xp FROM PlayerXP WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND item_id = (SELECT item_id FROM Item WHERE item_name = ?)"
-                        cursor.execute(sql, (username, self.item))
-                        print(f'added xp to category id: {category_id} Total: {xp}')
+                sql = "SELECT xp FROM PlayerXP WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND category_id = (SELECT category_id FROM Item WHERE item_name = ?)"
+                cursor.execute(sql, (username, self.item))
+                print(f'added xp to category id: {category_id} Total: {xp}')
                         
                 sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"
                 cursor.execute(sql,(self.username, self.item))
@@ -213,10 +214,6 @@ class Idle_thread():
                     sql = 'INSERT INTO PlayerItem (player_id, item_id) VALUES ((SELECT player_id from player WHERE name = ?), (SELECT item_id FROM item WHERE item_name = ?))'
                     cursor.execute(sql,(self.username, self.item))
                     sql_conn.commit()
-                else:
-                    # print(f'record found with count {item_count}')
-                    self.count = item_count[0][0]
-                    print(f'{self.item}, {self.count}')
         if self in idle_threads:
             idle_threads.remove(self)
         sql_conn.close()
