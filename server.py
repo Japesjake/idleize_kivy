@@ -130,7 +130,7 @@ class Server():
         cursor.execute(sql, (username,))
         experience = cursor.fetchall()
         msg = {"inventory": inventory, "experience": experience}
-        print(f'data sent to client: {msg}')
+        # print(f'data sent to client: {msg}')
         conn.sendall(json.dumps(msg).encode('utf-8'))
 class Idle_thread():
     def __init__(self, username, item, conn, addr):
@@ -165,13 +165,13 @@ class Idle_thread():
             duration = difficulty / (xp + 1)
             if duration < 1: duration = 1
             print(f'Time until reward: {duration}')
-            # time.sleep(duration)
-            elapsed = 0
-            while elapsed < duration:
-                if not self.idling or current_item != self.item:
-                    return
-                time.sleep(0.1)
-                elapsed += 0.1
+            time.sleep(duration)
+            # elapsed = 0
+            # while elapsed < duration:
+            #     if not self.idling or current_item != self.item:
+            #         return
+            #     time.sleep(0.1)
+            #     elapsed += 0.1
 
             if self.idling:
                 sql = "SELECT 1 FROM Item WHERE item_name = ? AND crafts_from_item_id IS NOT NULL;"
@@ -201,6 +201,10 @@ class Idle_thread():
                         cursor.execute(sql,(self.item,self.username))
                         sql_conn.commit()
 
+                        cursor.execute("SELECT count FROM PlayerItem, Item WHERE PlayerItem.item_id = (SELECT Item.item_id WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE name = ?)", (self.item, self.username))
+                        count = cursor.fetchone()
+                        print(f'{self.item}: count')
+
                         sql = "UPDATE PlayerItem SET count = count - (SELECT crafts_from_amount FROM Item WHERE item_name = ?) FROM Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE Item.item_name = ?) AND Player.name = ?"
                         cursor.execute(sql,(self.item,self.item,self.username))
                         sql_conn.commit()
@@ -208,7 +212,6 @@ class Idle_thread():
                 sql = "SELECT xp_reward FROM Item WHERE item_name = ?"
                 cursor.execute(sql, (self.item,))
                 xp_reward = cursor.fetchone()[0]
-                print(xp_reward)
 
                 ### adds XP ###
                 sql = "UPDATE PlayerXP SET xp = xp + ? WHERE category_id = ? AND player_id = (SELECT player_id FROM Player WHERE name = ?)"

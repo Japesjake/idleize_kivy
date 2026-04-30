@@ -142,7 +142,7 @@ class Idleize(App):
     def sync(self):
         client.sendall(json.dumps(['sync']).encode('utf-8'))
         response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'Data received from server {response}')
+        # print(f'Data received from server {response}')
         if response:
             new = dict(self.data)
             for item_name, count in response.get('inventory', []):
@@ -176,15 +176,20 @@ class Idleize(App):
             self.idling = True
         self.start_idle_thread()
 
-        #### saves sync data. Creates a new data.p file if no data on server ###
+        ### saves sync data. Creates a new data.p file if no data on server ###
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'Save data received from Server: {response}')
         if response:
             for row in response:
-                new = dict(self.data).copy()
-                new[row[0]] = row[1]
+                new = dict(self.data)
+                for item_name, count in response.get('inventory', []):
+                    new[item_name] = count
                 self.data = new
-                print(f'dictionary saved: {App.get_running_app().data}')
+
+                new = dict(self.xps)
+                for category_name, xp_value in response.get('experience', []):
+                    new[category_name] = xp_value
+                self.xps = new
         else:
             with open('data.p', 'wb') as file:
                 pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0}, file)
