@@ -11,16 +11,6 @@ from kivy.clock import Clock
 HOST = 'localhost'
 PORT = 1235
 
-files = Path('amounts.p')
-if not files.is_file():
-    with open('amounts.p', 'wb') as file:
-        pickle.dump({'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5}, file)
-
-files = Path('relationships.p')
-if not files.is_file():
-    with open('relationships.p', 'wb') as file:
-        pickle.dump({'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot'}, file)
-
 files = Path('data.p')
 if not files.is_file():
     with open('data.p', 'wb') as file:
@@ -30,21 +20,6 @@ files = Path('xps.p')
 if not files.is_file():
     with open('xps.p', 'wb') as file:
         pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0}, file)
-
-files = Path('groups.p')
-if not files.is_file():
-    with open('groups.p','wb') as file:
-        pickle.dump({'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor')}, file)
-
-files = Path('xp_values.p')
-if not files.is_file():
-    with open('xp_values.p','wb') as file:
-        pickle.dump({'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2}, file)
-
-files = Path('difficulties.p')
-if not files.is_file():
-    with open ('difficulties.p','wb') as file:
-        pickle.dump({'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron Armor': 500}, file)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -72,18 +47,15 @@ class WindowManager(ScreenManager):
 class Idleize(App):
     with open('data.p', 'rb') as file:
         data = DictProperty(pickle.load(file))
-    with open('relationships.p', 'rb') as file:
-        relationships = pickle.load(file)
-    with open('amounts.p', 'rb') as file:
-        amounts = pickle.load(file)
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
-    with open('groups.p', 'rb') as file:
-        groups = pickle.load(file)
-    with open('xp_values.p', 'rb') as file:
-        xp_values = pickle.load(file)
-    with open('difficulties.p', 'rb') as file:
-        difficulties = pickle.load(file)
+    amounts = {'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5}
+    relationships = {'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot'}
+    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor')}
+    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2}
+    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron Armor': 500}
+
+
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False

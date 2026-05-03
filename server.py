@@ -182,7 +182,6 @@ class Idle_thread():
                 sql = "SELECT count FROM PlayerItem, Item, Player WHERE PlayerItem.item_id = (SELECT crafts_from_item_id FROM Item WHERE item_name = ?) AND PlayerItem.player_id = (SELECT player_id FROM Player WHERE Player.name = ?)"
                 cursor.execute(sql, (self.item, self.username))
                 child_count = cursor.fetchall()
-                print(f'child_count: {child_count}')
 
                 sql = "SELECT crafts_from_amount FROM Item WHERE item_name = ?"
                 cursor.execute(sql, (self.item,))
@@ -230,6 +229,7 @@ class Idle_thread():
                     sql = 'INSERT INTO PlayerItem (player_id, item_id) VALUES ((SELECT player_id from player WHERE name = ?), (SELECT item_id FROM item WHERE item_name = ?))'
                     cursor.execute(sql,(self.username, self.item))
                     sql_conn.commit()
+                print(f"item: {self.item} count: {item_count}")
         if self in idle_threads:
             idle_threads.remove(self)
         sql_conn.close()
