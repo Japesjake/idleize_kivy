@@ -77,7 +77,12 @@ class Idleize(App):
                 has_mats = not child_item or (self.data.get(child_item, 0) >= required)
                 if has_mats:
                     Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(duration))
-                    time.sleep(duration)
+                    start_time = time.time()
+                    while time.time() - start_time < duration:
+                        if not self.idling or self.item != item:
+                            break
+                        time.sleep(0.1)
+                    # time.sleep(duration)
                     if self.idling and item == self.item:
                         def update(dt):
                             new_data = dict(self.data)
