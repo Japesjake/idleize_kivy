@@ -146,7 +146,7 @@ class Idle_thread():
         cursor = sql_conn.cursor()
         while self.idling:
             current_item = self.item
-            sql = "SELECT Category.category_id FROM Category, Item WHERE Category.category_id = (SELECT category_id FROM Item WHERE Item.category_id = Category.category_id AND Item.item_name = ?)"
+            sql = "SELECT category_id FROM Item WHERE item_name = ?"
             cursor.execute(sql, (self.item,))
             category_id = cursor.fetchone()[0]
             
@@ -159,7 +159,8 @@ class Idle_thread():
                 sql_conn.commit()
 
 
-            sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"
+            # sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"
+            sql = "SELECT item.difficulty, PlayerXP.xp FROM Item JOIN PlayerXP ON Item.category_id = PlayerXP.category_id JOIN Player ON PlayerXP.player_id WHERE Item.item_name = ? AND Player.name = ?"
             cursor.execute(sql, (self.item, self.username))
             difficulty, xp = cursor.fetchone()
             duration = difficulty / (xp + 1)
@@ -167,11 +168,12 @@ class Idle_thread():
             print(f'Time until reward: {duration}')
             time.sleep(duration)
             # elapsed = 0
+            # step = 1.0
             # while elapsed < duration:
             #     if not self.idling or current_item != self.item:
             #         return
-            #     time.sleep(0.1)
-            #     elapsed += 0.1
+            #     time.sleep(step)
+            #     elapsed += step
 
             if self.idling:
                 sql = "SELECT 1 FROM Item WHERE item_name = ? AND crafts_from_item_id IS NOT NULL;"
@@ -219,6 +221,7 @@ class Idle_thread():
 
                 sql = "SELECT xp FROM PlayerXP WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND category_id = (SELECT category_id FROM Item WHERE item_name = ?)"
                 cursor.execute(sql, (username, self.item))
+                xp = cursor.fetchone()
                 print(f'added xp to category id: {category_id} Total: {xp}')
                         
                 sql = "SELECT count FROM PlayerItem JOIN Player ON PlayerItem.player_id = Player.player_id JOIN Item ON PlayerItem.item_id = Item.item_id WHERE Player.name = ? AND Item.item_name = ?"
