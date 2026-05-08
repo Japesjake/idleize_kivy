@@ -26,8 +26,8 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 Builder.load_file('main.kv')
 class LoginScreen(Screen):
     def verify(self):
-        # username = self.ids.username.text
-        # password = self.ids.password.text
+        username = self.ids.username.text
+        password = self.ids.password.text
         username = 'JpJab'
         password = 'password'
         App.get_running_app().verify_credentials(username, password)
