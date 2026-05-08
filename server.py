@@ -165,7 +165,7 @@ class Idle_thread():
             difficulty, xp = cursor.fetchone()
             duration = difficulty / (xp + 1)
             if duration < 1: duration = 1
-            print(f'Time until reward: {duration} difficulty: {difficulty} xp: {xp}')
+            print(f'Time until reward: {duration} xp: {xp}')
             time.sleep(duration)
             # elapsed = 0
             # step = 1.0
@@ -203,8 +203,8 @@ class Idle_thread():
                     #### WORK ON THIS USE PRINT TO TEST ####
 
                 if crafts_from_item_id and child_count - crafts_from_amount >= 0:
-                    sql = "UPDATE PlayerItem SET count = count - 1 WHERE player_id = ? AND item_id = ?"
-                    cursor.execute(sql, (player_id, crafts_from_item_id))
+                    sql = "UPDATE PlayerItem SET count = count - ? WHERE player_id = ? AND item_id = ?"
+                    cursor.execute(sql, (crafts_from_amount, player_id, crafts_from_item_id))
                     sql_conn.commit()
 
                 ### query for print statement ###
@@ -213,6 +213,7 @@ class Idle_thread():
                 count = cursor.fetchone()
 
                 print(f'UPDATE: Item: {self.item} Count: {count}')
+                print(f'Child count: {child_count}')
         if self in idle_threads:
             idle_threads.remove(self)
         sql_conn.close()
