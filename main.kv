@@ -135,8 +135,18 @@
                                 on_press: app.send('iron armor')
                 Screen:
                     name: 'Gathering'
-                    Label:
-                        text: 'Gathering'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Gathering XP: ' + str(app.xps['gathering'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Wood: ' + '\n' + str(app.data['wood'])
+                                on_press: app.send('wood')
+                            Button:
+                                text: 'Sticks: ' + '\n' + str(app.data['stick'])
+                                on_press: app.send('stick')
                 Screen:
                     name: 'Cooking'
                     Label:

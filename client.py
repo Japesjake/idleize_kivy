@@ -14,12 +14,12 @@ PORT = 1235
 files = Path('data.p')
 if not files.is_file():
     with open('data.p', 'wb') as file:
-        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0}, file)
+        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick':0}, file)
 
 files = Path('xps.p')
 if not files.is_file():
     with open('xps.p', 'wb') as file:
-        pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0}, file)
+        pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}, file)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -49,11 +49,11 @@ class Idleize(App):
         data = DictProperty(pickle.load(file))
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
-    amounts = {'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5}
-    relationships = {'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot'}
-    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor')}
-    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2}
-    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron armor': 500}
+    amounts = {'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5, 'stick': 1, 'wood': 1}
+    relationships = {'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot', 'wood': None, 'stick': 'wood'}
+    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor'), 'gathering':('wood', 'stick')}
+    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2, 'wood':1, 'stick':1}
+    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron armor': 500, 'wood': 1, 'stick': 1}
 
 
     player_name = 'JpJab'
@@ -86,9 +86,13 @@ class Idleize(App):
                     if self.idling and item == self.item:
                         def update(dt):
                             new_data = dict(self.data)
-                            new_data[item] += 1
-                            if child_item:
-                                new_data[child_item] -= required
+                            child_stock = new_data.get(child_item)
+                            
+
+                            if child_stock == None or child_stock > 0:
+                                new_data[item] += 1
+                                if child_stock and new_data[child_item] > 0:
+                                    new_data[child_item] -= required
                             self.data = new_data
                             
                             new_xp = dict(self.xps)

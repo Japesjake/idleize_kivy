@@ -14,12 +14,14 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-categories = [('mining',), ('smelting',), ('crafting',)]
+categories = [('mining',), ('smelting',), ('crafting',), ('gathering',)]
 sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
 sql_conn.commit()
 
-items = [('copper ore',None,None,'mining',1,1), ('iron ore',None,None,'mining',500,2), ('copper ingot','copper ore',1, 'smelting',1,1), ('iron ingot', 'iron ore',1,'smelting',500,2), ('copper armor', 'copper ingot',5,'crafting',1,1), ('iron armor', 'iron ingot',5,'crafting',500,2)]
+### name, crafts_from, crafts_from_amount, category_name, difficulty, xp_reward
+
+items = [('copper ore',None,None,'mining',1,1), ('iron ore',None,None,'mining',500,2), ('copper ingot','copper ore',1, 'smelting',1,1), ('iron ingot', 'iron ore',1,'smelting',500,2), ('copper armor', 'copper ingot',5,'crafting',1,1), ('iron armor', 'iron ingot',5,'crafting',500,2), ('wood', None, None,'gathering',1,1), ('stick', 'wood', 1, 'gathering', 1, 1)]
 cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id, crafts_from_amount, category_id, difficulty, xp_reward) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?), ?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
