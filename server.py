@@ -1,5 +1,5 @@
 import socket
-import threading, time, sqlite3, json
+import threading, time, sqlite3, json, bcrypt
 
 host = '0.0.0.0'
 port = 1235
@@ -56,14 +56,15 @@ class Server():
                         if connection.conn == conn and connection.addr == addr:
                             connection.username = username
                             connection.password = password
+                            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
                             cursor.execute("SELECT name, password FROM Player WHERE name = ?",(username,))
                             credentials = cursor.fetchall()
-                            if credentials and credentials[0][0] == username and credentials[0][1] == password:
+                            if credentials and credentials[0][0] == username and bcrypt.checkpw(password.encode('utf-8'), credentials[0][1]):
                                 conn.sendall(json.dumps(['good']).encode('utf-8'))
                             if not credentials:
                                 print(f'no player found. Creating player with credentials')
                                 conn.sendall(json.dumps(['new']).encode('utf-8'))
-                                cursor.execute("INSERT INTO Player (name, password) VALUES (?, ?)",(username, password))
+                                cursor.execute("INSERT INTO Player (name, password) VALUES (?, ?)",(username, hashed))
                                 sql_connection.commit()
                     ## checks for relevant running threads then send info to client ##
                     conflict = False
