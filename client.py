@@ -91,15 +91,16 @@ class Idleize(App):
 
                             if child_stock == None or child_stock > 0:
                                 new_data[item] += 1
+                                new_xp = dict(self.xps)
+                                new_xp[xp_group] += self.xp_values.get(item, 0)
+                                self.xps = new_xp
+                                print(f'{item}: {self.data.get(item)}')
+                                print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
                                 if child_stock and new_data[child_item] > 0:
                                     new_data[child_item] -= required
                             self.data = new_data
                             
-                            new_xp = dict(self.xps)
-                            new_xp[xp_group] += self.xp_values.get(item, 0)
-                            self.xps = new_xp
-                            print(f'{item}: {self.data.get(item)}')
-                            print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
+
                         Clock.schedule_once(update)
                 else:
                     print('Missing materials!')

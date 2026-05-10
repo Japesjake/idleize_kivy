@@ -202,7 +202,6 @@ class Idle_thread():
                     sql = "UPDATE PlayerXP SET xp = xp + ? WHERE category_id = ? AND player_id = ?"
                     cursor.execute(sql, (xp_reward, category_id, player_id))
                     sql_conn.commit()
-                    #### WORK ON THIS USE PRINT TO TEST ####
 
                 if crafts_from_item_id and child_count - crafts_from_amount >= 0:
                     sql = "UPDATE PlayerItem SET count = count - ? WHERE player_id = ? AND item_id = ?"
