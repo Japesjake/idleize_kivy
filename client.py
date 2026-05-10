@@ -11,15 +11,21 @@ from kivy.clock import Clock
 HOST = 'localhost'
 PORT = 1235
 
-files = Path('data.p')
-if not files.is_file():
+def create_data():
     with open('data.p', 'wb') as file:
         pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick':0}, file)
 
-files = Path('xps.p')
-if not files.is_file():
+def create_xps():
     with open('xps.p', 'wb') as file:
         pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}, file)
+
+files = Path('data.p')
+if not files.is_file():
+    create_data()
+
+files = Path('xps.p')
+if not files.is_file():
+    create_xps()
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -141,8 +147,9 @@ class Idleize(App):
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'response after credentials sent: {response}')
         client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
-        
-        
+        if response == ['new']:
+            create_data()
+            create_xps()
         ### Receives Data concerning idling process on server ###
         response = json.loads(client.recv(1024).decode('utf-8'))
         print(f'Received from Server after aknowledged sent: {response} as type: {type(response)}')
