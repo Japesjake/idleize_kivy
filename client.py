@@ -34,8 +34,8 @@ class LoginScreen(Screen):
     def verify(self):
         username = self.ids.username.text
         password = self.ids.password.text
-        # username = 'JpJab'
-        # password = 'password'
+        username = 'JpJab'
+        password = 'password'
         App.get_running_app().verify_credentials(username, password)
         self.manager.current = 'main'
 class ThickProgressBar(ProgressBar):

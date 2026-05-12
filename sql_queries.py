@@ -5,23 +5,35 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
-cursor.execute("""
-               SELECT ingredient_item_id, amount)
-               FROM Recipe
-               WHERE product_item_id = (SELECT item_id FROM Item WHERE item_name = 'copper arrow')
-               """)
+sql = "INSERT OR IGNORE INTO PlayerXP (player_id, category_id, xp) VALUES ((SELECT player_id FROM Player WHERE name = ?),(SELECT category_id FROM Item WHERE item_name = ?),0)"
+cursor.execute(sql, ('JpJab', 'copper ore'))
+connection.commit()
 
-ingredients = cursor.fetchall()
-print(ingredients)
 
-cursor.execute("""
-                    SELECT r.ingredient_item_id, r.amount, i.item_name 
-                    FROM Recipe r 
-                    JOIN Item i ON r.ingredient_item_id = i.item_id
-                    WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
-                """, ('copper arrow',))
-ingredients = cursor.fetchall()
-print(ingredients)
+
+# # sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"
+# # sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item JOIN PlayerXP ON Item.category_id = PlayerXP.category_id JOIN Player ON PlayerXP.player_id WHERE Item.item_name = ? AND Player.name = ?"
+# sql = "SELECT difficulty FROM Item WHERE item_name = (SElECT item_id FROM Item WHERE item_name = 'copper ore')"
+# cursor.execute(sql, ('copper ore', 'JpJab'))
+# difficulty, xp = cursor.fetchone()
+
+# cursor.execute("""
+#                SELECT ingredient_item_id, amount)
+#                FROM Recipe
+#                WHERE product_item_id = (SELECT item_id FROM Item WHERE item_name = 'copper arrow')
+#                """)
+
+# ingredients = cursor.fetchall()
+# print(ingredients)
+
+# cursor.execute("""
+#                     SELECT r.ingredient_item_id, r.amount, i.item_name 
+#                     FROM Recipe r 
+#                     JOIN Item i ON r.ingredient_item_id = i.item_id
+#                     WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
+#                 """, ('copper arrow',))
+# ingredients = cursor.fetchall()
+# print(ingredients)
 
 # sql = "SELECT Category.category_name, PlayerXP.xp FROM PlayerXP JOIN Category ON PlayerXP.category_id = Category.category_id JOIN Player ON PlayerXP.player_id = player.player_id WHERE Player.name = 'JpJab';"
 # cursor.execute(sql)

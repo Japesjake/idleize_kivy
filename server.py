@@ -20,10 +20,8 @@ sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
 sql_conn.commit()
 
-### name, crafts_from, crafts_from_amount, category_name, difficulty, xp_reward
-
-items = [('copper ore',None,None,'mining',1,1), ('iron ore',None,None,'mining',500,2), ('copper ingot','copper ore',1, 'smelting',1,1), ('iron ingot', 'iron ore',1,'smelting',500,2), ('copper armor', 'copper ingot',5,'crafting',1,1), ('iron armor', 'iron ingot',5,'crafting',500,2), ('wood', None, None,'gathering',1,1), ('stick', 'wood', 1, 'gathering', 1, 1), ('copper arrow', 'copper ingot', 1, 'crafting', 1, 1)]
-cursor.executemany("INSERT OR IGNORE INTO Item (item_name, crafts_from_item_id, crafts_from_amount, category_id, difficulty, xp_reward) VALUES (?, (SELECT item_id FROM Item WHERE item_name = ?), ?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
+items = [('copper ore','mining',1,1), ('iron ore','mining',500,2), ('copper ingot', 'smelting',1,1), ('iron ingot','smelting',500,2), ('copper armor','crafting',1,1), ('iron armor','crafting',500,2), ('wood','gathering',1,1), ('stick', 'gathering', 1, 1), ('copper arrow', 'crafting', 1, 1)]
+cursor.executemany("INSERT OR IGNORE INTO Item (item_name, category_id, difficulty, xp_reward) VALUES (?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
@@ -174,6 +172,7 @@ class Idle_thread():
         cursor.execute(sql, (username, ))
         player_id = cursor.fetchone()[0]
         while self.idling:
+            print('')
             # current_item = self.item
             sql = "SELECT category_id FROM Item WHERE item_name = ?"
             cursor.execute(sql, (self.item,))
@@ -184,13 +183,12 @@ class Idle_thread():
             sql_conn.commit()
 
 
-            # sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"
-            sql = "SELECT item.difficulty, PlayerXP.xp FROM Item JOIN PlayerXP ON Item.category_id = PlayerXP.category_id JOIN Player ON PlayerXP.player_id WHERE Item.item_name = ? AND Player.name = ?"
+            sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"            
             cursor.execute(sql, (self.item, self.username))
             difficulty, xp = cursor.fetchone()
             duration = difficulty / (xp + 1)
             if duration < 1: duration = 1
-            print(f'Time until reward: {duration} xp: {xp}')
+            print(f'Time until reward: {duration}')
             time.sleep(duration)
             # elapsed = 0
             # step = 1.0
@@ -208,7 +206,6 @@ class Idle_thread():
                     WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
                 """, (self.item,))
                 ingredients = cursor.fetchall()
-                print(ingredients)
 
                 can_craft = True
                 for ing_id, req_amount, ing_name in ingredients:
@@ -225,6 +222,7 @@ class Idle_thread():
                     for ing_id, req_amount, ing_name in ingredients:
                         cursor.execute("UPDATE PlayerItem SET count = count - ? WHERE player_id = ? AND item_id = ?", 
                                     (req_amount, player_id, ing_id))
+                        sql_conn.commit()
 
                     sql = "SELECT item_id, xp_reward, category_id FROM Item WHERE item_name = ?"
                     cursor.execute(sql, (self.item, ))
@@ -240,15 +238,28 @@ class Idle_thread():
                     cursor.execute(sql, (xp_reward, category_id, player_id))
                     sql_conn.commit()
 
+
                     ### increments count for parent ###
                     sql = "UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?"
                     cursor.execute(sql, (player_id, item_id))
                     sql_conn.commit()
 
                 ### query for print statement ###
-                sql = "SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = ?"
-                cursor.execute(sql, (player_id, item_id))
+                sql = "SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = (SELECT item_id FROM Item WHERE item_name = ?)"
+                cursor.execute(sql, (player_id, self.item))
                 count = cursor.fetchone()
+
+                # 2. Use this query to fetch the absolute latest XP from the database
+                cursor.execute("""
+                SELECT px.xp 
+                FROM PlayerXP px
+                JOIN Item i ON px.category_id = i.category_id
+                WHERE px.player_id = ? AND i.item_name = ?
+                """, (player_id, self.item))
+
+                # 3. Fetch the result and use it for your print statement
+                actual_xp = cursor.fetchone()[0]
+                print(f"SERVER UPDATE: {self.username} now has {actual_xp} XP in {self.item}'s category.")
 
                 print(f'UPDATE: Item: {self.item} Count: {count}')
         if self in idle_threads:

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS Player (
-    player_id INTEGER PRIMARY KEY,
+    player_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255) NOT NULL UNIQUE,
     password BLOB NOT NULL,
     start_date TEXT DEFAULT (datetime('now'))
@@ -8,12 +8,9 @@ CREATE TABLE IF NOT EXISTS Player (
 CREATE TABLE IF NOT EXISTS Item (
     item_id INTEGER PRIMARY KEY,
     item_name VARCHAR(255) NOT NULL UNIQUE,
-    crafts_from_item_id INTEGER,
-    crafts_from_amount INTEGER,
-    category_id INTEGER,
-    difficulty INTEGER,
-    xp_reward INTEGER,
-    FOREIGN KEY (crafts_from_item_id) REFERENCES Item(item_id),
+    category_id INTEGER NOT NULL,
+    difficulty INTEGER NOT NULL,
+    xp_reward INTEGER NOT NULL,
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
@@ -41,10 +38,10 @@ CREATE TABLE IF NOT EXISTS PlayerXP (
 );
 
 CREATE TABLE IF NOT EXISTS Recipe (
-    recipe_id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_item_id INTEGER,
     ingredient_item_id INTEGER,
     amount INTEGER,
     FOREIGN KEY (product_item_id) REFERENCES Item(item_id),
     FOREIGN KEY (ingredient_item_id) REFERENCES Item(item_id)
+    PRIMARY KEY (ingredient_item_id, product_item_id)
 )
