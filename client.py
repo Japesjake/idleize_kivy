@@ -13,7 +13,7 @@ PORT = 1235
 
 def create_data():
     with open('data.p', 'wb') as file:
-        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick':0}, file)
+        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick':0, 'copper arrow': 0}, file)
 
 def create_xps():
     with open('xps.p', 'wb') as file:
@@ -55,13 +55,10 @@ class Idleize(App):
         data = DictProperty(pickle.load(file))
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
-    amounts = {'copper ingot':1,'iron ingot':1,'copper armor':5,'iron armor':5, 'stick': 1, 'wood': 1}
-    relationships = {'copper ore': None,'iron ore': None,'copper ingot': 'copper ore', 'iron ingot': 'iron ore', 'copper armor': 'copper ingot', 'iron armor': 'iron ingot', 'wood': None, 'stick': 'wood'}
-    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor'), 'gathering':('wood', 'stick')}
-    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2, 'wood':1, 'stick':1}
-    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron armor': 500, 'wood': 1, 'stick': 1}
-
-
+    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor', 'copper arrow'), 'gathering':('wood', 'stick')}
+    recipies = {'copper ingot': {'copper ore': 1}, 'iron ingot': {'iron ore': 1}, 'copper armor': {'copper ingot': 1}, 'iron armor': {'iron ingot': 1}, 'stick': {'wood': 1}, 'copper arrow': {'copper ingot': 1, 'stick': 1}}
+    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2, 'wood':1, 'stick':1, 'copper arrow': 1}
+    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron armor': 500, 'wood': 1, 'stick': 1, 'copper arrow': 1}
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False
@@ -71,16 +68,21 @@ class Idleize(App):
         return self.main
     def idle_thread(self):
         while True:
+            item = self.item
             while self.idling:
-                item = self.item
                 for key, value in self.groups.items():
                     if item in value:
                         xp_group = key
                         break                    
                 duration = self.get_duration(xp_group, item)
-                child_item = self.relationships.get(item)
-                required = self.amounts.get(item, 0)
-                has_mats = not child_item or (self.data.get(child_item, 0) >= required)
+                child_items = self.recipies.get(item)
+                has_mats = True
+                if child_items:
+                    for child_item, amount in child_items.items():
+                        print(child_item)
+                        print(amount)
+                        if self.data.get(child_item) - amount < 0:
+                            has_mats = False
                 if has_mats:
                     Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(duration))
                     start_time = time.time()
@@ -92,18 +94,23 @@ class Idleize(App):
                     if self.idling and item == self.item:
                         def update(dt):
                             new_data = dict(self.data)
-                            child_stock = new_data.get(child_item)
-                            
-
-                            if child_stock == None or child_stock > 0:
-                                new_data[item] += 1
-                                new_xp = dict(self.xps)
-                                new_xp[xp_group] += self.xp_values.get(item, 0)
-                                self.xps = new_xp
-                                print(f'{item}: {self.data.get(item)}')
-                                print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
-                                if child_stock and new_data[child_item] > 0:
-                                    new_data[child_item] -= required
+                            can_still_afford = True
+                            if child_items:
+                                for child_item, amount in child_items.items():
+                                    if new_data.get(child_item, 0) < amount:
+                                        can_still_afford = False
+                                        break
+                            if not can_still_afford:
+                                return
+                            new_data[item] += 1
+                            if child_items:
+                                for child_item, amount in child_items.items():
+                                    new_data[child_item] -= amount
+                            new_xp = dict(self.xps)
+                            new_xp[xp_group] += self.xp_values.get(item, 0)
+                            self.xps = new_xp
+                            print(f'{item}: {self.data.get(item)}')
+                            print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
                             self.data = new_data
                             
 

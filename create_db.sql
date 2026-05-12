@@ -39,3 +39,12 @@ CREATE TABLE IF NOT EXISTS PlayerXP (
     FOREIGN KEY (player_id) REFERENCES Player(player_id),
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
+
+CREATE TABLE IF NOT EXISTS Recipe (
+    recipe_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_item_id INTEGER,
+    ingredient_item_id INTEGER,
+    amount INTEGER,
+    FOREIGN KEY (product_item_id) REFERENCES Item(item_id),
+    FOREIGN KEY (ingredient_item_id) REFERENCES Item(item_id)
+)
