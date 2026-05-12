@@ -5,7 +5,23 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
+cursor.execute("""
+               SELECT ingredient_item_id, amount)
+               FROM Recipe
+               WHERE product_item_id = (SELECT item_id FROM Item WHERE item_name = 'copper arrow')
+               """)
 
+ingredients = cursor.fetchall()
+print(ingredients)
+
+cursor.execute("""
+                    SELECT r.ingredient_item_id, r.amount, i.item_name 
+                    FROM Recipe r 
+                    JOIN Item i ON r.ingredient_item_id = i.item_id
+                    WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
+                """, ('copper arrow',))
+ingredients = cursor.fetchall()
+print(ingredients)
 
 # sql = "SELECT Category.category_name, PlayerXP.xp FROM PlayerXP JOIN Category ON PlayerXP.category_id = Category.category_id JOIN Player ON PlayerXP.player_id = player.player_id WHERE Player.name = 'JpJab';"
 # cursor.execute(sql)
