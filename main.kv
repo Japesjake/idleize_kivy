@@ -15,7 +15,30 @@
         RoundedRectangle:
             pos: self.pos
             size: (self.width * (self.value / float(self.max))) if self.max else 0, self.height
-
+<CreateProfilePopup@Popup>:
+    title: "new"
+    size_hint: 0.7, 0.4
+    auto_dismiss: False
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+        Label:
+            text: "No profile found. Create a new one?"
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: 10
+            Button:
+                text: "Yes"
+                on_release:
+                    root.dismiss()
+                    app.confirm_new_profile_creation()
+            Button:
+                text: "No"
+                on_release: 
+                    root.dismiss()
+                    app.cancel_new_profile_creation() # <--- Tell the app we aborted
 <WindowManager>:
     LoginScreen:
     MainLayout:

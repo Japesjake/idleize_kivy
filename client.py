@@ -8,6 +8,8 @@ import socket, pickle, json, time, threading
 from pathlib import Path
 from kivy.animation import Animation
 from kivy.clock import Clock
+from kivy.factory import Factory
+
 HOST = 'localhost'
 PORT = 1235
 
@@ -29,32 +31,63 @@ if not files.is_file():
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+# Utility network functions to avoid packet smashing / JSONDecodeError
+def send_json(sock, data):
+    payload = json.dumps(data) + '\n'
+    sock.sendall(payload.encode('utf-8'))
+
+def recv_json(sock):
+    data = b""
+    while True:
+        chunk = sock.recv(1)
+        if not chunk:
+            # Connection dropped or closed mid-transmission
+            return None 
+        if chunk == b'\n':
+            break
+        data += chunk
+        
+    # Guard against parsing empty streams
+    if not data:
+        return None
+        
+    try:
+        return json.loads(data.decode('utf-8'))
+    except json.JSONDecodeError:
+        return None
+
 Builder.load_file('main.kv')
+
 class LoginScreen(Screen):
     def verify(self):
         username = self.ids.username.text
         password = self.ids.password.text
-        username = 'JpJab'
-        password = 'password'
-        App.get_running_app().verify_credentials(username, password)
-        self.manager.current = 'main'
+        
+        # FIX: Run network operations inside an async background thread to prevent app hanging
+        threading.Thread(
+            target=App.get_running_app().verify_credentials, 
+            args=(username, password), 
+            daemon=True
+        ).start()
+
 class ThickProgressBar(ProgressBar):
     pass
+
 class MainLayout(Screen):
     def animate(self, duration):
         self.ids.pb.value = 0
         anim = Animation(value=100, duration=duration)
         anim.start(self.ids.pb)
+
 class WindowManager(ScreenManager):
     pass
-
-
 
 class Idleize(App):
     with open('data.p', 'rb') as file:
         data = DictProperty(pickle.load(file))
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
+        
     groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor', 'copper arrow'), 'gathering':('wood', 'stick')}
     recipies = {'copper ingot': {'copper ore': 1}, 'iron ingot': {'iron ore': 1}, 'copper armor': {'copper ingot': 1}, 'iron armor': {'iron ingot': 1}, 'stick': {'wood': 1}, 'copper arrow': {'copper ingot': 1, 'stick': 1}}
     xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2, 'wood':1, 'stick':1, 'copper arrow': 1}
@@ -62,10 +95,12 @@ class Idleize(App):
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False
+
     def build(self):
         self.main = WindowManager()
         client.connect((HOST, PORT))
         return self.main
+
     def idle_thread(self):
         while True:
             item = self.item
@@ -79,8 +114,6 @@ class Idleize(App):
                 has_mats = True
                 if child_items:
                     for child_item, amount in child_items.items():
-                        print(child_item)
-                        print(amount)
                         if self.data.get(child_item) - amount < 0:
                             has_mats = False
                 if has_mats:
@@ -90,7 +123,7 @@ class Idleize(App):
                         if not self.idling or self.item != item:
                             break
                         time.sleep(0.1)
-                    # time.sleep(duration)
+                        
                     if self.idling and item == self.item:
                         def update(dt):
                             new_data = dict(self.data)
@@ -109,22 +142,20 @@ class Idleize(App):
                             new_xp = dict(self.xps)
                             new_xp[xp_group] += self.xp_values.get(item, 0)
                             self.xps = new_xp
-                            print(f'{item}: {self.data.get(item)}')
-                            print(f'XP added to {xp_group} total amount {self.xps.get(xp_group)}')
                             self.data = new_data
-                            
-
                         Clock.schedule_once(update)
                 else:
                     print('Missing materials!')
                     self.idling = False
+
     def start_idle_thread(self):
         thread = threading.Thread(target=self.idle_thread, daemon=True)
         print(f'thread started.')
         thread.start()
         return thread
+
     def send(self, item):
-        client.sendall(json.dumps((item)).encode('utf-8'))
+        send_json(client, item)
         if self.item != item:
             self.idling = False
             self.item = item
@@ -134,76 +165,119 @@ class Idleize(App):
             main_screen.ids.pb.value = 0
         else:
             self.idling = not self.idling
-    def sync(self):
-        client.sendall(json.dumps(['sync']).encode('utf-8'))
-        response = json.loads(client.recv(1024).decode('utf-8'))
-        # print(f'Data received from server {response}')
-        if response:
-            new = dict(self.data)
-            for item_name, count in response.get('inventory', []):
-                new[item_name] = count
-            self.data = new
 
-            new = dict(self.xps)
-            for category_name, xp_value in response.get('experience', []):
-                new[category_name] = xp_value
-            self.xps = new
+    def sync(self):
+        threading.Thread(target=self._perform_sync, daemon=True).start()
+
+    def _perform_sync(self):
+        send_json(client, ['sync'])
+        response = recv_json(client)
+        if response:
+            def apply_sync(dt):
+                new_data = dict(self.data)
+                for item_name, count in response.get('inventory', []):
+                    new_data[item_name] = count
+                self.data = new_data
+
+                new_xps = dict(self.xps)
+                for category_name, xp_value in response.get('experience', []):
+                    new_xps[category_name] = xp_value
+                self.xps = new_xps
+            Clock.schedule_once(apply_sync)
+
     def verify_credentials(self, username, password):
         print('credentials sent')
-        client.sendall(json.dumps((username, password)).encode('utf-8'))
-        response = json.loads(client.recv(1024).decode('utf-8'))
+        send_json(client, (username, password))
+        response = recv_json(client)
         print(f'response after credentials sent: {response}')
-        client.sendall(json.dumps(['aknowledged']).encode('utf-8'))
+        
         if response == ['new']:
+            print('creating new data and opening popup')
             create_data()
             create_xps()
+            # Safely trigger popup rendering on main loop, then drop out of this thread context
+            Clock.schedule_once(lambda dt: Factory.CreateProfilePopup().open())
+            return
+        
+        if response == ['good']:
+            send_json(client, ['aknowledged'])
+            self.continue_login_flow()
+
+    def confirm_new_profile_creation(self):
+        """Dispatched asynchronously when user taps 'Yes' inside the popup modal"""
+        threading.Thread(target=self._async_profile_confirm, daemon=True).start()
+
+    def _async_profile_confirm(self):
+        send_json(client, ['aknowledged'])
+        self.continue_login_flow()
+        
+    def cancel_new_profile_creation(self):
+        """Dispatched asynchronously when user taps 'No' inside the popup modal"""
+        threading.Thread(target=self._async_profile_cancel, daemon=True).start()
+
+    def _async_profile_cancel(self):
+        # Send a cancellation notice instead of an acknowledgment
+        send_json(client, ['canceled'])
+    def continue_login_flow(self):
         ### Receives Data concerning idling process on server ###
-        response = json.loads(client.recv(1024).decode('utf-8'))
-        print(f'Received from Server after aknowledged sent: {response} as type: {type(response)}')
+        response = recv_json(client)
+        print(f'Received from Server after status checked: {response}')
+        
+        if response is None:
+            print("Server disconnected unexpectedly.")
+            return # Safely exit thread context
+            
         if response == 'false':
             self.idling = False
         else:
-            new = dict(self.data).copy()
-            self.item = response[0]
-            self.count = response[1]
-            new[self.item] = self.count
-            self.data = new
-            print(f'data on local client after receiving data: {self.data}')
-            self.idling = True
+            def set_idle_state(dt):
+                new = dict(self.data).copy()
+                self.item = response[0]
+                self.count = response[1]
+                new[self.item] = self.count
+                self.data = new
+                self.idling = True
+            Clock.schedule_once(set_idle_state)
+            
         self.start_idle_thread()
 
         ### saves sync data. Creates a new data.p file if no data on server ###
-        response = json.loads(client.recv(1024).decode('utf-8'))
+        response = recv_json(client)
         print(f'Save data received from Server: {response}')
-        if response:
-            for row in response:
-                new = dict(self.data)
-                for item_name, count in response.get('inventory', []):
-                    new[item_name] = count
-                self.data = new
+        
+        if response is None:
+            print("Server disconnected during sync pipeline.")
+            return
 
-                new = dict(self.xps)
+        if response:
+            def final_sync(dt):
+                new_data = dict(self.data)
+                for item_name, count in response.get('inventory', []):
+                    new_data[item_name] = count
+                self.data = new_data
+
+                new_xps = dict(self.xps)
                 for category_name, xp_value in response.get('experience', []):
-                    new[category_name] = xp_value
-                self.xps = new
-        else:
-            with open('data.p', 'wb') as file:
-                pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0}, file)
-            with open('xps.p', 'wb') as file:
-                pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0}, file)
+                    new_xps[category_name] = xp_value
+                self.xps = new_xps
+            Clock.schedule_once(final_sync)
+            
+        Clock.schedule_once(lambda dt: self.switch_to_main_screen())
+
+    def switch_to_main_screen(self):
+        self.main.current = 'main'
 
     def get_duration(self, group, item):
         duration = self.difficulties[item] / (self.xps[group] + 1)
         if duration <= 1:
             duration = 1
         return duration
+
     def on_stop(self):
         with open('data.p', "wb") as file:
             pickle.dump(dict(self.data), file)
         with open('xps.p', "wb") as file:
             pickle.dump(dict(self.xps), file)
 
-
 if __name__ == "__main__":
-    idle = Idleize()
-    idle.run()
+    Idleize().run()
