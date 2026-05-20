@@ -192,9 +192,9 @@ class Idleize(App):
         print(f'response after credentials sent: {response}')
         
         if response == ['new']:
-            print('creating new data and opening popup')
-            create_data()
-            create_xps()
+            print('opening popup')
+            # create_data()
+            # create_xps()
             # Safely trigger popup rendering on main loop, then drop out of this thread context
             Clock.schedule_once(lambda dt: Factory.CreateProfilePopup().open())
             return
@@ -210,7 +210,7 @@ class Idleize(App):
     def _async_profile_confirm(self):
         send_json(client, ['aknowledged'])
         self.continue_login_flow()
-        
+
     def cancel_new_profile_creation(self):
         """Dispatched asynchronously when user taps 'No' inside the popup modal"""
         threading.Thread(target=self._async_profile_cancel, daemon=True).start()
@@ -249,7 +249,7 @@ class Idleize(App):
             print("Server disconnected during sync pipeline.")
             return
 
-        if response:
+        if response and (response.get('inventory') or response.get('experience')):
             def final_sync(dt):
                 new_data = dict(self.data)
                 for item_name, count in response.get('inventory', []):
@@ -261,6 +261,13 @@ class Idleize(App):
                     new_xps[category_name] = xp_value
                 self.xps = new_xps
             Clock.schedule_once(final_sync)
+        else:
+            # If the server returned blank arrays, initialize the fresh default state locally
+            print("No online state found. Generating fresh local database fallback profile profiles...")
+            def init_default_profile(dt):
+                self.data = {'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick': 0, 'copper arrow': 0}
+                self.xps = {'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}
+            Clock.schedule_once(init_default_profile)
             
         Clock.schedule_once(lambda dt: self.switch_to_main_screen())
 
