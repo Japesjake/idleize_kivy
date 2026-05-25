@@ -9,17 +9,18 @@ from pathlib import Path
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.factory import Factory
+from data import data, xps, groups, recipies, xp_values, difficulties
 
 HOST = 'localhost'
 PORT = 1235
 
 def create_data():
     with open('data.p', 'wb') as file:
-        pickle.dump({'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick':0, 'copper arrow': 0}, file)
+        pickle.dump(data, file)
 
 def create_xps():
     with open('xps.p', 'wb') as file:
-        pickle.dump({'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}, file)
+        pickle.dump(xps, file)
 
 files = Path('data.p')
 if not files.is_file():
@@ -87,14 +88,15 @@ class Idleize(App):
         data = DictProperty(pickle.load(file))
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
-        
-    groups = {'mining': ('copper ore', 'iron ore'),'smelting': ('copper ingot', 'iron ingot'),'crafting': ('copper armor', 'iron armor', 'copper arrow'), 'gathering':('wood', 'stick')}
-    recipies = {'copper ingot': {'copper ore': 1}, 'iron ingot': {'iron ore': 1}, 'copper armor': {'copper ingot': 1}, 'iron armor': {'iron ingot': 1}, 'stick': {'wood': 1}, 'copper arrow': {'copper ingot': 1, 'stick': 1}}
-    xp_values = {'copper ore': 1, 'iron ore': 2, 'copper ingot': 1, 'iron ingot': 2, 'copper armor': 1, 'iron armor': 2, 'wood':1, 'stick':1, 'copper arrow': 1}
-    difficulties = {'copper ore': 1, 'iron ore': 500, 'copper ingot': 1, 'iron ingot': 500, 'copper armor': 1, 'iron armor': 500, 'wood': 1, 'stick': 1, 'copper arrow': 1}
+
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False
+
+    groups = groups
+    recipies = recipies
+    xp_values = xp_values
+    difficulties = difficulties
 
     def build(self):
         self.main = WindowManager()
