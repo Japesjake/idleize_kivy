@@ -129,7 +129,7 @@
                     GridLayout:
                         cols: 2
                         Label:
-                            text: 'Player HP: ' + str(app.hps.get('player', 0))
+                            text: 'Player HP: ' + str(app.hps['player'])
                         Button:
                             text: 'Rat'
                             on_press: app.send('fight rat')
