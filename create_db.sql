@@ -44,4 +44,21 @@ CREATE TABLE IF NOT EXISTS Recipe (
     FOREIGN KEY (product_item_id) REFERENCES Item(item_id),
     FOREIGN KEY (ingredient_item_id) REFERENCES Item(item_id)
     PRIMARY KEY (ingredient_item_id, product_item_id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS PlayerStats (
+    player_id INTEGER PRIMARY KEY,
+    strength INTEGER,
+    dexterity INTEGER,
+    max_hp INTEGER,
+    hp INTEGER,
+    FOREIGN KEY (player_id) REFERENCES Player(player_id)
+);
+
+CREATE TABLE IF NOT EXISTS EquippedItems (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    slot_name TEXT NOT NULL,
+    item_id INTEGER NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES Player(player_id)
+);

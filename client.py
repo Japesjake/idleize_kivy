@@ -4,12 +4,12 @@ from kivy.lang import Builder
 from kivy.properties import DictProperty
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen
-import socket, pickle, json, time, threading
+import socket, pickle, json, time, threading, random
 from pathlib import Path
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.factory import Factory
-from data import data, xps, groups, recipies, xp_values, difficulties
+from data import data, xps, groups, recipies, xp_values, difficulties, enemies, hps, player_stats
 
 HOST = 'localhost'
 PORT = 1235
@@ -22,6 +22,10 @@ def create_xps():
     with open('xps.p', 'wb') as file:
         pickle.dump(xps, file)
 
+def create_hps():
+    with open('hps.p', 'wb') as file:
+        pickle.dump(hps, file)
+
 files = Path('data.p')
 if not files.is_file():
     create_data()
@@ -29,6 +33,10 @@ if not files.is_file():
 files = Path('xps.p')
 if not files.is_file():
     create_xps()
+
+files = Path('hps.p')
+if not files.is_file():
+    create_hps()
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -88,6 +96,8 @@ class Idleize(App):
         data = DictProperty(pickle.load(file))
     with open('xps.p', 'rb') as file:
         xps = DictProperty(pickle.load(file))
+    with open('hps.p', 'rb') as file:
+        hps = DictProperty(pickle.load(file))
 
     player_name = 'JpJab'
     item = 'copper ore'
@@ -97,6 +107,8 @@ class Idleize(App):
     recipies = recipies
     xp_values = xp_values
     difficulties = difficulties
+    enemies = enemies
+    player_stats = player_stats
 
     def build(self):
         self.main = WindowManager()
@@ -107,48 +119,85 @@ class Idleize(App):
         while True:
             item = self.item
             while self.idling:
-                for key, value in self.groups.items():
-                    if item in value:
-                        xp_group = key
-                        break                    
-                duration = self.get_duration(xp_group, item)
-                child_items = self.recipies.get(item)
-                has_mats = True
-                if child_items:
-                    for child_item, amount in child_items.items():
-                        if self.data.get(child_item) - amount < 0:
-                            has_mats = False
-                if has_mats:
-                    Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(duration))
-                    start_time = time.time()
-                    while time.time() - start_time < duration:
-                        if not self.idling or self.item != item:
-                            break
-                        time.sleep(0.1)
-                        
-                    if self.idling and item == self.item:
-                        def update(dt):
-                            new_data = dict(self.data)
-                            can_still_afford = True
-                            if child_items:
-                                for child_item, amount in child_items.items():
-                                    if new_data.get(child_item, 0) < amount:
-                                        can_still_afford = False
-                                        break
-                            if not can_still_afford:
-                                return
-                            new_data[item] += 1
-                            if child_items:
-                                for child_item, amount in child_items.items():
-                                    new_data[child_item] -= amount
-                            new_xp = dict(self.xps)
-                            new_xp[xp_group] += self.xp_values.get(item, 0)
-                            self.xps = new_xp
-                            self.data = new_data
-                        Clock.schedule_once(update)
+                if 'fight' in item:
+                    time.sleep(1)
+                    print('fighting')
+                    print(1)
+                    enemy = item.removeprefix('fight ')
+                    enemy_base_hp = self.enemies.get(enemy).get('hp')
+                    enemy_actual_hp = self.hps.get(enemy)
+                    enemy_attack = self.enemies.get(enemy).get('attack')
+                    enemy_defense = self.enemies.get(enemy).get('defense')
+                    player_max_hp = self.player_stats.get('hp')
+                    player_actual_hp = self.hps.get('player')
+                    player_armor_type = self.player_stats.get('armor type')
+                    player_weapon_type = self.player_stats.get('weapon type')
+                    if player_armor_type == 'strength':
+                        player_defense = self.player_stats.get('defense')
+                    if player_armor_type == 'dexterity':
+                        player_defense = self.player_stats.get('dexterity')
+                    if player_weapon_type == 'strength':
+                        player_attack = self.player_stats.get('strength')
+                    if player_weapon_type == 'dexterity':
+                        player_attack = self.player_stats.get('dexterity')
+                    enemy_hits = (enemy_attack + random.randint(-5, 5)) - (player_defense + random.randint(-5, 5)) > 0
+                    player_hits = (player_attack + random.randint(-5, 5)) - (enemy_defense + random.randint(-5,5)) > 0
+                    new_hps = dict(self.hps)
+                    if enemy_hits:
+                        new_hps['player'] -= enemy_attack
+                    if player_hits:
+                        new_hps[enemy] -= player_attack
+                    def apply_hp_update(dt):
+                        self.hps = new_hps
+                    Clock.schedule_once(apply_hp_update)
+                    print(self.hps)
+
+
+
+
                 else:
-                    print('Missing materials!')
-                    self.idling = False
+                    for key, value in self.groups.items():
+                        if item in value:
+                            xp_group = key
+                            break                    
+                    duration = self.get_duration(xp_group, item)
+                    child_items = self.recipies.get(item)
+                    has_mats = True
+                    if child_items:
+                        for child_item, amount in child_items.items():
+                            if self.data.get(child_item) - amount < 0:
+                                has_mats = False
+                    if has_mats:
+                        Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(duration))
+                        start_time = time.time()
+                        while time.time() - start_time < duration:
+                            if not self.idling or self.item != item:
+                                break
+                            time.sleep(0.1)
+                            
+                        if self.idling and item == self.item:
+                            def update(dt):
+                                new_data = dict(self.data)
+                                can_still_afford = True
+                                if child_items:
+                                    for child_item, amount in child_items.items():
+                                        if new_data.get(child_item, 0) < amount:
+                                            can_still_afford = False
+                                            break
+                                if not can_still_afford:
+                                    return
+                                new_data[item] += 1
+                                if child_items:
+                                    for child_item, amount in child_items.items():
+                                        new_data[child_item] -= amount
+                                new_xp = dict(self.xps)
+                                new_xp[xp_group] += self.xp_values.get(item, 0)
+                                self.xps = new_xp
+                                self.data = new_data
+                            Clock.schedule_once(update)
+                    else:
+                        print('Missing materials!')
+                        self.idling = False
 
     def start_idle_thread(self):
         thread = threading.Thread(target=self.idle_thread, daemon=True)

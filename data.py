@@ -37,3 +37,18 @@ difficulties = {'copper ore': 1,
                 'iron armor': 500, 
                 'wood': 1, 'stick': 1, 
                 'copper arrow': 1}
+enemies = {
+    'rat': {'hp': 5, 'attack': 1, 'defense': 1, 'accuracy': .1}
+}
+hps = {
+    'player': 10,
+    'rat': 5
+}
+player_stats = {
+    'hp': 10,
+    'strength': 1,
+    'dexterity': 1,
+    'defense': 1,
+    'armor type': 'strength',
+    'weapon type': 'strength'
+}
