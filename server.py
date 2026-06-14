@@ -19,12 +19,23 @@ cursor.executescript(create_db)
 categories = [('mining',), ('smelting',), ('crafting',), ('gathering',)]
 sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
-sql_conn.commit()
 
-items = [('copper ore','mining',1,1), ('iron ore','mining',500,2), ('copper ingot', 'smelting',1,1), ('iron ingot','smelting',500,2), ('copper armor','crafting',1,1), ('iron armor','crafting',500,2), ('wood','gathering',1,1), ('stick', 'gathering', 1, 1), ('copper arrow', 'crafting', 1, 1)]
+items = [('copper ore','mining',1,1), 
+         ('iron ore','mining',500,2), 
+         ('copper ingot', 'smelting',1,1), 
+         ('iron ingot','smelting',500,2), 
+         ('copper armor','crafting',1,1), 
+         ('iron armor','crafting',500,2), 
+         ('wood','gathering',1,1),
+         ('wood plank','gathering',1,2),
+         ('stick', 'gathering', 1, 1), 
+         ('copper arrow', 'crafting', 1, 1),
+         ('copper sword', 'crafting', 1, 1)
+         ]
 cursor.executemany("INSERT OR IGNORE INTO Item (item_name, category_id, difficulty, xp_reward) VALUES (?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
 sql_conn.commit()
 cursor.execute("SELECT item_name FROM Item")
+
 items = cursor.fetchall()
 items = [item[0] for item in items]
 
@@ -34,14 +45,20 @@ recipes = [
     ('iron armor', 'iron ingot', 5),
     ('copper armor', 'copper ingot', 5),
     ('stick', 'wood', 1),
+    ('wood plank', 'wood', 1),
     ('copper arrow', 'copper ingot', 1),
-    ('copper arrow', 'stick', 1)
+    ('copper arrow', 'stick', 1),
+    ('copper sword', 'wood plank', 1),
+    ('copper sword', 'copper ingot', 1)
 ]
 
 sql = """INSERT OR IGNORE INTO Recipe (product_item_id, ingredient_item_id, amount) 
          VALUES ((SELECT item_id FROM Item WHERE item_name = ?), 
                  (SELECT item_id FROM Item WHERE item_name = ?), ?)"""
 cursor.executemany(sql, recipes)
+
+# sql = """INSERT OR IGNORE INTO EquippedItems (player_id, slot_name, item_id)"""
+# cursor.execute(sql, (1, 'body', ))
 sql_conn.commit()
 sql_conn.close()
 
@@ -143,7 +160,7 @@ class Server():
                     elif isinstance(data, list) and data[0] == 'sync':
                         self.sync(username, conn)
                         
-                    elif data in items:
+                    elif data in items or 'fight' in data:
                         already_running_this_item = False
                         for idle_thread in idle_threads:
                             if idle_thread.username == username:
@@ -216,78 +233,87 @@ class Idle_thread():
             sql = "SELECT player_id FROM Player WHERE name = ?"
             cursor.execute(sql, (username, ))
             player_id = cursor.fetchone()[0]
-            
+            sql = """INSERT OR IGNORE INTO PlayerStats (player_id, hp, strength, dexterity, defense, max_hp) VALUES (?, ?, ?, ?, ?, ?)"""            
+            cursor.execute(sql, (player_id,10,1,1,1,10))
             while self.idling:
-                sql = "SELECT category_id FROM Item WHERE item_name = ?"
-                cursor.execute(sql, (self.item,))
-                category_id = cursor.fetchone()[0]
-                
-                sql = "INSERT OR IGNORE INTO PlayerXP (player_id, category_id, xp) VALUES (?,?,0)"
-                cursor.execute(sql, (player_id, category_id))
-                sql_conn.commit()
+                if 'fight' in self.item:
+                    time.sleep(1)
+                    enemy = self.item.removeprefix('fight ')
+                    sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
+                    cursor.execute(sql,(player_id,))
+                    s = cursor.fetchall()
+                    print(s)
+                else:
+                    sql = "SELECT category_id FROM Item WHERE item_name = ?"
+                    cursor.execute(sql, (self.item,))
+                    category_id = cursor.fetchone()[0]
+                    
+                    sql = "INSERT OR IGNORE INTO PlayerXP (player_id, category_id, xp) VALUES (?,?,0)"
+                    cursor.execute(sql, (player_id, category_id))
+                    sql_conn.commit()
 
-                sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"            
-                cursor.execute(sql, (self.item, self.username))
-                difficulty, xp = cursor.fetchone()
-                duration = difficulty / (xp + 1)
-                if duration < 1: duration = 1
-                
-                time.sleep(duration)
+                    sql = "SELECT Item.difficulty, PlayerXP.xp FROM Item, PlayerXP WHERE Item.item_name = ? AND PlayerXP.player_id = (SELECT player_id FROM Player WHERE name = ?)"            
+                    cursor.execute(sql, (self.item, self.username))
+                    difficulty, xp = cursor.fetchone()
+                    duration = difficulty / (xp + 1)
+                    if duration < 1: duration = 1
+                    
+                    time.sleep(duration)
 
-                if self.idling:
-                    cursor.execute("""
-                        SELECT r.ingredient_item_id, r.amount, i.item_name 
-                        FROM Recipe r 
-                        JOIN Item i ON r.ingredient_item_id = i.item_id
-                        WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
-                    """, (self.item,))
-                    ingredients = cursor.fetchall()
+                    if self.idling:
+                        cursor.execute("""
+                            SELECT r.ingredient_item_id, r.amount, i.item_name 
+                            FROM Recipe r 
+                            JOIN Item i ON r.ingredient_item_id = i.item_id
+                            WHERE r.product_item_id = (SELECT item_id FROM Item WHERE item_name = ?)
+                        """, (self.item,))
+                        ingredients = cursor.fetchall()
 
-                    can_craft = True
-                    for ing_id, req_amount, ing_name in ingredients:
-                        cursor.execute("SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = ?", (player_id, ing_id))
-                        result = cursor.fetchone()
-                        current_count = result[0] if result else 0
-                        
-                        if current_count < req_amount:
-                            can_craft = False
-                            break
-                    if can_craft:
+                        can_craft = True
                         for ing_id, req_amount, ing_name in ingredients:
-                            cursor.execute("UPDATE PlayerItem SET count = count - ? WHERE player_id = ? AND item_id = ?", 
-                                        (req_amount, player_id, ing_id))
+                            cursor.execute("SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = ?", (player_id, ing_id))
+                            result = cursor.fetchone()
+                            current_count = result[0] if result else 0
+                            
+                            if current_count < req_amount:
+                                can_craft = False
+                                break
+                        if can_craft:
+                            for ing_id, req_amount, ing_name in ingredients:
+                                cursor.execute("UPDATE PlayerItem SET count = count - ? WHERE player_id = ? AND item_id = ?", 
+                                            (req_amount, player_id, ing_id))
+                                sql_conn.commit()
+
+                            sql = "SELECT item_id, xp_reward, category_id FROM Item WHERE item_name = ?"
+                            cursor.execute(sql, (self.item, ))
+                            item_id, xp_reward, category_id = cursor.fetchone()
+                            
+                            sql = "INSERT OR IGNORE INTO PlayerItem (player_id, item_id, count) VALUES (?, ?, 0)"
+                            cursor.execute(sql, (player_id, item_id))
                             sql_conn.commit()
 
-                        sql = "SELECT item_id, xp_reward, category_id FROM Item WHERE item_name = ?"
-                        cursor.execute(sql, (self.item, ))
-                        item_id, xp_reward, category_id = cursor.fetchone()
-                        
-                        sql = "INSERT OR IGNORE INTO PlayerItem (player_id, item_id, count) VALUES (?, ?, 0)"
-                        cursor.execute(sql, (player_id, item_id))
-                        sql_conn.commit()
+                            sql = "UPDATE PlayerXP SET xp = xp + ? WHERE category_id = ? AND player_id = ?"
+                            cursor.execute(sql, (xp_reward, category_id, player_id))
+                            sql_conn.commit()
 
-                        sql = "UPDATE PlayerXP SET xp = xp + ? WHERE category_id = ? AND player_id = ?"
-                        cursor.execute(sql, (xp_reward, category_id, player_id))
-                        sql_conn.commit()
+                            sql = "UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?"
+                            cursor.execute(sql, (player_id, item_id))
+                            sql_conn.commit()
 
-                        sql = "UPDATE PlayerItem SET count = count + 1 WHERE player_id = ? AND item_id = ?"
-                        cursor.execute(sql, (player_id, item_id))
-                        sql_conn.commit()
+                    sql = "SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = (SELECT item_id FROM Item WHERE item_name = ?)"
+                    cursor.execute(sql, (player_id, self.item))
+                    count = cursor.fetchone()
 
-                sql = "SELECT count FROM PlayerItem WHERE player_id = ? AND item_id = (SELECT item_id FROM Item WHERE item_name = ?)"
-                cursor.execute(sql, (player_id, self.item))
-                count = cursor.fetchone()
+                    cursor.execute("""
+                    SELECT px.xp 
+                    FROM PlayerXP px
+                    JOIN Item i ON px.category_id = i.category_id
+                    WHERE px.player_id = ? AND i.item_name = ?
+                    """, (player_id, self.item))
 
-                cursor.execute("""
-                SELECT px.xp 
-                FROM PlayerXP px
-                JOIN Item i ON px.category_id = i.category_id
-                WHERE px.player_id = ? AND i.item_name = ?
-                """, (player_id, self.item))
-
-                actual_xp = cursor.fetchone()[0]
-                print(f"SERVER UPDATE: {self.username} now has {actual_xp} XP in {self.item}'s category.")
-                print(f'UPDATE: Item: {self.item} Count: {count}')
+                    actual_xp = cursor.fetchone()[0]
+                    print(f"SERVER UPDATE: {self.username} now has {actual_xp} XP in {self.item}'s category.")
+                    print(f'UPDATE: Item: {self.item} Count: {count}')
                 
         if self in idle_threads:
             idle_threads.remove(self)

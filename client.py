@@ -4,12 +4,13 @@ from kivy.lang import Builder
 from kivy.properties import DictProperty
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.label import Label
 import socket, pickle, json, time, threading, random
 from pathlib import Path
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.factory import Factory
-from data import data, xps, groups, recipies, xp_values, difficulties, enemies, hps, player_stats
+from data import data, xps, groups, recipies, xp_values, difficulties, enemies, hps, player_stats, equipment_stats, player_equipment
 
 HOST = 'localhost'
 PORT = 1235
@@ -26,6 +27,10 @@ def create_hps():
     with open('hps.p', 'wb') as file:
         pickle.dump(hps, file)
 
+def create_equipped():
+    with open('equipped.p', 'wb') as file:
+        pickle.dump(player_equipment, file)
+
 files = Path('data.p')
 if not files.is_file():
     create_data()
@@ -37,6 +42,10 @@ if not files.is_file():
 files = Path('hps.p')
 if not files.is_file():
     create_hps()
+
+files = Path('equipped.p')
+if not files.is_file():
+    create_equipped()
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -51,7 +60,7 @@ def recv_json(sock):
         chunk = sock.recv(1)
         if not chunk:
             # Connection dropped or closed mid-transmission
-            return None 
+            return None
         if chunk == b'\n':
             break
         data += chunk
@@ -120,6 +129,7 @@ class Idleize(App):
             item = self.item
             while self.idling:
                 if 'fight' in item:
+                    Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(1))
                     time.sleep(1)
                     print('fighting')
                     print(1)
@@ -150,6 +160,9 @@ class Idleize(App):
                     def apply_hp_update(dt):
                         self.hps = new_hps
                     Clock.schedule_once(apply_hp_update)
+                    if self.hps['player'] <= 0 or self.hps[enemy] <= 0:
+                        self.idling = False
+                        break
                     print(self.hps)
 
 
@@ -336,6 +349,19 @@ class Idleize(App):
             pickle.dump(dict(self.data), file)
         with open('xps.p', "wb") as file:
             pickle.dump(dict(self.xps), file)
+
+    def on_data(self, instance, value):
+        if not self.root or not self.root.has_screen('main'):
+            return
+        container = self.root.get_screen('main').ids.inventory_list
+        container.clear_widgets()
+        for item_name, count in value.items():
+            if count > 0:
+                item_label = Label(
+                    text = f"{item_name.title()}: {count}",
+                    size_hint_y = None
+                )
+                container.add_widget(item_label)
 
 if __name__ == "__main__":
     Idleize().run()

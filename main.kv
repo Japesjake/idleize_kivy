@@ -119,10 +119,15 @@
                 Screen:
                     name: 'Character'
                     GridLayout:
+                        cols: 2
                         Label:
                             text: 'Experience'
                         Label:
                             text: 'Mining: ' + str(app.xps['mining'])
+                        GridLayout:
+                            id: inventory_list
+                            cols: 1
+                        
 
                 Screen:
                     name: 'Combat'
