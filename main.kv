@@ -124,8 +124,12 @@
                             text: 'Experience'
                         Label:
                             text: 'Mining: ' + str(app.xps['mining'])
-                        Label:
-                            text: 'equippables:'
+                        GridLayout:
+                            cols: 1
+                            Label:
+                                text: str(app.equipped['body'])
+                            Label:
+                                text: str(app.equipped['right'])
                         ScrollView:
                             do_scroll_x: False
                             do_scroll_y: True

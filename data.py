@@ -2,11 +2,13 @@ data = {'copper ore': 0,
         'iron ore': 0,
         'copper ingot': 0,
         'iron ingot': 0,
-        'copper armor': 0, 
-        'iron armor': 0, 
+        'copper armor': 1, 
+        'iron armor': 1, 
         'wood': 0, 
         'stick':0, 
-        'copper arrow': 0}
+        'copper arrow': 0,
+        'copper sword': 1,
+        'iron sword': 1}
 xps = {'mining': 0, 
        'smelting': 0, 
        'crafting': 0, 
@@ -59,7 +61,12 @@ equipment_stats = {
     'copper sword': {'attack': 1}
 }
 
-player_equipment = {
+equipped = {
     'body': 'copper armor',
     'right': 'copper sword'
 }
+
+equippables = ['copper armor', 
+               'iron armor', 
+               'copper sword', 
+               'iron sword']

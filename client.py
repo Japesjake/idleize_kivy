@@ -10,7 +10,7 @@ from pathlib import Path
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.factory import Factory
-from data import data, xps, groups, recipies, xp_values, difficulties, enemies, hps, player_stats, equipment_stats, player_equipment
+from data import data, xps, groups, recipies, xp_values, difficulties, enemies, hps, player_stats, equipment_stats, equipped, equippables
 
 HOST = 'localhost'
 PORT = 1235
@@ -31,7 +31,7 @@ def create_hps():
 
 def create_equipped():
     with open('equipped.p', 'wb') as file:
-        pickle.dump(player_equipment, file)
+        pickle.dump(equipped, file)
 
 files = Path('data.p')
 if not files.is_file():
@@ -112,7 +112,9 @@ class Idleize(App):
         xps = DictProperty(pickle.load(file))
     with open('hps.p', 'rb') as file:
         hps = DictProperty(pickle.load(file))
-
+    with open('equipped.p', 'rb') as file:
+        equipped = DictProperty(pickle.load(file))
+    print(equipped)
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False
@@ -123,21 +125,28 @@ class Idleize(App):
     difficulties = difficulties
     enemies = enemies
     player_stats = player_stats
+    equippables = equippables
+    def equip(self, name):
+        new_equipped = dict(self.equipped)
+        if 'armor' in name:
+            new_equipped['body'] = name
+        if 'sword' in name:
+            new_equipped['right'] = name
+        def apply_update(dt):
+            self.equipped = new_equipped
+        Clock.schedule_once(apply_update)
+        print(self.equipped)
     def populate_inventory(self):
-        # Your source data list
-        items = ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6"]
-        print('ok')
-        print('')
-        # Access the container id from the .kv file
         container = self.root.get_screen('main').ids.list_container
-        # Loop and add widgets dynamically
-        for item_text in items:
-            btn = Button(
-                text=item_text,
-                size_hint_y=None,
-                height=40
-            )
-            container.add_widget(btn) 
+        for name, amount in self.data.items():
+            if name in equippables and amount > 0:
+                btn = Button(
+                    text=name,
+                    size_hint_y=None,
+                    height=40,
+                )
+                btn.bind(on_press=lambda instance, current_name=name: self.equip(current_name))
+                container.add_widget(btn) 
     def build(self):
         self.main = WindowManager()
         client.connect((HOST, PORT))
