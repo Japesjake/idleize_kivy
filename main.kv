@@ -124,9 +124,18 @@
                             text: 'Experience'
                         Label:
                             text: 'Mining: ' + str(app.xps['mining'])
-                        GridLayout:
-                            id: inventory_list
-                            cols: 1
+                        Label:
+                            text: 'equippables:'
+                        ScrollView:
+                            do_scroll_x: False
+                            do_scroll_y: True
+
+                            BoxLayout:
+                                id: list_container
+                                orientation: 'vertical'
+                                size_hint_y: None
+                                height: self.minimum_height  # Critical: Automatically expands size
+                                spacing: 5
                         
 
                 Screen:

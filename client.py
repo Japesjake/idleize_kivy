@@ -2,9 +2,9 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 from kivy.properties import DictProperty
+from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.uix.label import Label
 import socket, pickle, json, time, threading, random
 from pathlib import Path
 from kivy.animation import Animation
@@ -14,6 +14,8 @@ from data import data, xps, groups, recipies, xp_values, difficulties, enemies, 
 
 HOST = 'localhost'
 PORT = 1235
+
+Builder.load_file('main.kv')
 
 def create_data():
     with open('data.p', 'wb') as file:
@@ -74,7 +76,7 @@ def recv_json(sock):
     except json.JSONDecodeError:
         return None
 
-Builder.load_file('main.kv')
+
 
 class LoginScreen(Screen):
     def verify(self):
@@ -92,10 +94,13 @@ class ThickProgressBar(ProgressBar):
     pass
 
 class MainLayout(Screen):
+    def on_enter(self):
+        App.get_running_app().populate_inventory()
     def animate(self, duration):
         self.ids.pb.value = 0
         anim = Animation(value=100, duration=duration)
-        anim.start(self.ids.pb)
+        anim.start(self.ids.pb)  
+ 
 
 class WindowManager(ScreenManager):
     pass
@@ -118,12 +123,25 @@ class Idleize(App):
     difficulties = difficulties
     enemies = enemies
     player_stats = player_stats
-
+    def populate_inventory(self):
+        # Your source data list
+        items = ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6"]
+        print('ok')
+        print('')
+        # Access the container id from the .kv file
+        container = self.root.get_screen('main').ids.list_container
+        # Loop and add widgets dynamically
+        for item_text in items:
+            btn = Button(
+                text=item_text,
+                size_hint_y=None,
+                height=40
+            )
+            container.add_widget(btn) 
     def build(self):
         self.main = WindowManager()
         client.connect((HOST, PORT))
         return self.main
-
     def idle_thread(self):
         while True:
             item = self.item
@@ -164,10 +182,6 @@ class Idleize(App):
                         self.idling = False
                         break
                     print(self.hps)
-
-
-
-
                 else:
                     for key, value in self.groups.items():
                         if item in value:
@@ -349,19 +363,6 @@ class Idleize(App):
             pickle.dump(dict(self.data), file)
         with open('xps.p', "wb") as file:
             pickle.dump(dict(self.xps), file)
-
-    def on_data(self, instance, value):
-        if not self.root or not self.root.has_screen('main'):
-            return
-        container = self.root.get_screen('main').ids.inventory_list
-        container.clear_widgets()
-        for item_name, count in value.items():
-            if count > 0:
-                item_label = Label(
-                    text = f"{item_name.title()}: {count}",
-                    size_hint_y = None
-                )
-                container.add_widget(item_label)
 
 if __name__ == "__main__":
     Idleize().run()
