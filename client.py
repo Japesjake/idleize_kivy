@@ -161,7 +161,7 @@ class Idleize(App):
                     print('fighting')
                     print(1)
                     enemy = item.removeprefix('fight ')
-                    enemy_base_hp = self.enemies.get(enemy).get('hp')
+                    enemy_max_hp = self.enemies.get(enemy).get('hp')
                     enemy_actual_hp = self.hps.get(enemy)
                     enemy_attack = self.enemies.get(enemy).get('attack')
                     enemy_defense = self.enemies.get(enemy).get('defense')
@@ -188,12 +188,14 @@ class Idleize(App):
                         new_hps['player'] -= enemy_attack
                     if player_hits:
                         new_hps[enemy] -= player_attack
+
+                    if self.hps['player'] <= 0 or self.hps[enemy] <= 0:
+                        self.idling = False
+                        new_hps['player'] = player_max_hp
+                        new_hps[enemy] = enemy_max_hp
                     def apply_hp_update(dt):
                         self.hps = new_hps
                     Clock.schedule_once(apply_hp_update)
-                    if self.hps['player'] <= 0 or self.hps[enemy] <= 0:
-                        self.idling = False
-                        break
                     print(self.hps)
                 else:
                     for key, value in self.groups.items():

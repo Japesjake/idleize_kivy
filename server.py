@@ -237,11 +237,12 @@ class Idle_thread():
             cursor.execute(sql, (player_id,10,1,1,1,10))
             while self.idling:
                 if 'fight' in self.item:
-                    time.sleep(1)
-                    enemy = self.item.removeprefix('fight ')
-                    sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
-                    cursor.execute(sql,(player_id,))
-                    s = cursor.fetchall()
+                    pass
+                    # time.sleep(1)
+                    # enemy = self.item.removeprefix('fight ')
+                    # sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
+                    # cursor.execute(sql,(player_id,))
+                    # s = cursor.fetchall()
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"
                     cursor.execute(sql, (self.item,))

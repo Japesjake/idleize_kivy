@@ -38,7 +38,8 @@ difficulties = {'copper ore': 1,
                 'iron ingot': 500, 
                 'copper armor': 1, 
                 'iron armor': 500, 
-                'wood': 1, 'stick': 1, 
+                'wood': 1,
+                'stick': 1, 
                 'copper arrow': 1}
 enemies = {
     'rat': {'hp': 5, 'attack': 1, 'defense': 1}
@@ -57,9 +58,9 @@ player_stats = {
 }
 
 equipment_stats = {
-    'copper armor': {'defense': 1},
-    'copper sword': {'attack': 1},
-    'bow': {'attack': 1}
+    'copper armor': 1,
+    'copper sword': 1,
+    'bow': 1
 }
 
 equipped = {
