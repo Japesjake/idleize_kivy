@@ -125,21 +125,21 @@ class Idleize(App):
     difficulties = difficulties
     enemies = enemies
     player_stats = player_stats
+    equipment_stats = equipment_stats
     equippables = equippables
     def equip(self, name):
         new_equipped = dict(self.equipped)
         if 'armor' in name:
             new_equipped['body'] = name
-        if 'sword' in name:
+        if 'sword' in name or 'bow' in name:
             new_equipped['right'] = name
         def apply_update(dt):
             self.equipped = new_equipped
         Clock.schedule_once(apply_update)
-        print(self.equipped)
     def populate_inventory(self):
         container = self.root.get_screen('main').ids.list_container
         for name, amount in self.data.items():
-            if name in equippables and amount > 0:
+            if name in equippables.keys() and amount > 0:
                 btn = Button(
                     text=name,
                     size_hint_y=None,
@@ -167,10 +167,12 @@ class Idleize(App):
                     enemy_defense = self.enemies.get(enemy).get('defense')
                     player_max_hp = self.player_stats.get('hp')
                     player_actual_hp = self.hps.get('player')
-                    player_armor_type = self.player_stats.get('armor type')
-                    player_weapon_type = self.player_stats.get('weapon type')
+                    player_body = self.equipped.get('body')
+                    player_right = self.equipped.get('right')
+                    player_armor_type = self.equippables.get(player_body)
+                    player_weapon_type = self.equippables.get(player_right)
                     if player_armor_type == 'strength':
-                        player_defense = self.player_stats.get('defense')
+                        player_defense = self.equipment_stats.get(player_body)
                     if player_armor_type == 'dexterity':
                         player_defense = self.player_stats.get('dexterity')
                     if player_weapon_type == 'strength':
@@ -180,6 +182,8 @@ class Idleize(App):
                     enemy_hits = (enemy_attack + random.randint(-5, 5)) - (player_defense + random.randint(-5, 5)) > 0
                     player_hits = (player_attack + random.randint(-5, 5)) - (enemy_defense + random.randint(-5,5)) > 0
                     new_hps = dict(self.hps)
+                    print('armor' + player_armor_type)
+                    print('weapon' + player_weapon_type)
                     if enemy_hits:
                         new_hps['player'] -= enemy_attack
                     if player_hits:

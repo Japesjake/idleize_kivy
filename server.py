@@ -242,7 +242,6 @@ class Idle_thread():
                     sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
                     cursor.execute(sql,(player_id,))
                     s = cursor.fetchall()
-                    print(s)
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"
                     cursor.execute(sql, (self.item,))
