@@ -16,6 +16,7 @@ HOST = 'localhost'
 PORT = 1235
 
 Builder.load_file('main.kv')
+
 def create_data():
     with open('data.p', 'wb') as file:
         pickle.dump(data, file)
@@ -144,6 +145,7 @@ class Idleize(App):
         threading.Thread(target=send_equip_worker, daemon=True).start()
     def populate_inventory(self):
         container = self.root.get_screen('main').ids.list_container
+        container.clear_widgets()
         for name, amount in self.data.items():
             if name in equippables.keys() and amount > 0:
                 btn = Button(
@@ -152,7 +154,7 @@ class Idleize(App):
                     height=40,
                 )
                 btn.bind(on_press=lambda instance, current_name=name: self.equip(current_name))
-                container.add_widget(btn) 
+                container.add_widget(btn)
     def build(self):
         self.main = WindowManager()
         client.connect((HOST, PORT))

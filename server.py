@@ -21,17 +21,17 @@ sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
 
 items = [('copper ore','mining',1,1), 
-         ('iron ore','mining',500,2), 
+         ('iron ore','mining',1,2), 
          ('copper ingot', 'smelting',1,1), 
-         ('iron ingot','smelting',500,2), 
+         ('iron ingot','smelting',1,2), 
          ('copper armor','crafting',1,1), 
-         ('iron armor','crafting',500,2), 
+         ('iron armor','crafting',1,2), 
          ('wood','gathering',1,1),
          ('wood plank','gathering',1,2),
          ('stick', 'gathering', 1, 1),
          ('copper arrow', 'crafting', 1, 1),
          ('copper sword', 'crafting', 1, 1),
-         ('iron sword', 'crafting', 500,2),
+         ('iron sword', 'crafting', 1,2),
          ('bow', 'crafting', 1,1 )
          ]
 cursor.executemany("INSERT OR IGNORE INTO Item (item_name, category_id, difficulty, xp_reward) VALUES (?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
@@ -226,6 +226,7 @@ class Server():
             
             msg = {"inventory": inventory, "experience": experience}
             print(f'Inventory and Experience data sent to client')
+            print(msg)
             send_json(conn, msg)
 
 class Idle_thread():
@@ -259,7 +260,7 @@ class Idle_thread():
                     player_strength = stats[1]
                     player_dexterity = stats[2]
                     player_max_hp = stats[3]
-
+                    ##### fight logic here #####
                     
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"
