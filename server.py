@@ -51,7 +51,9 @@ recipes = [
     ('copper arrow', 'copper ingot', 1),
     ('copper arrow', 'stick', 1),
     ('copper sword', 'wood plank', 1),
-    ('copper sword', 'copper ingot', 1)
+    ('copper sword', 'copper ingot', 1),
+    ('iron sword', 'iron ingot', 1),
+    ('iron sword', 'wood plank', 1)
 ]
 
 sql = """INSERT OR IGNORE INTO Recipe (product_item_id, ingredient_item_id, amount) 

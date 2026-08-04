@@ -363,7 +363,8 @@ class Idleize(App):
             # If the server returned blank arrays, initialize the fresh default state locally
             print("No online state found. Generating fresh local database fallback profile profiles...")
             def init_default_profile(dt):
-                self.data = {'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick': 0, 'copper arrow': 0}
+                # self.data = {'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick': 0, 'copper arrow': 0}
+                self.data = data
                 self.xps = {'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}
             Clock.schedule_once(init_default_profile)
             
