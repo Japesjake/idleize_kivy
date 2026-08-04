@@ -197,7 +197,7 @@
                         GridLayout:
                             cols: 2
                             Button:
-                                text: 'Wood: ' + str(app.data['wood'])
+                                text: 'Wood Logs: ' + str(app.data['wood'])
                                 on_press: app.send('wood')
                             Button:
                                 text: 'Sticks: ' + str(app.data['stick'])
@@ -205,10 +205,20 @@
                             Button:
                                 text: 'Wood Planks: ' + str(app.data['wood plank'])
                                 on_press: app.send('wood plank')
+                            Button:
+                                text: 'Carrots:  ' + str(app.data['carrot'])
+                                on_press: app.send('carrot')
                 Screen:
                     name: 'Cooking'
-                    Label:
-                        text: 'Cooking'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Cooking XP: ' + str(app.xps['cooking'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Cooked Carrots: ' + str(app.data['cooked carrot'])
+                                on_press: app.send('cooked carrot')
             ThickProgressBar:
                 id: pb
                 value: 0

@@ -365,7 +365,8 @@ class Idleize(App):
             def init_default_profile(dt):
                 # self.data = {'copper ore': 0,'iron ore': 0,'copper ingot': 0, 'iron ingot': 0, 'copper armor': 0, 'iron armor': 0, 'wood': 0, 'stick': 0, 'copper arrow': 0}
                 self.data = data
-                self.xps = {'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}
+                self.xps = xps
+                # self.xps = {'mining': 0, 'smelting': 0, 'crafting': 0, 'gathering': 0}
             Clock.schedule_once(init_default_profile)
             
         Clock.schedule_once(lambda dt: self.switch_to_main_screen())

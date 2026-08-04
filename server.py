@@ -16,7 +16,7 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-categories = [('mining',), ('smelting',), ('crafting',), ('gathering',)]
+categories = [('mining',), ('smelting',), ('crafting',), ('gathering',), ('cooking',)]
 sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
 
@@ -32,7 +32,9 @@ items = [('copper ore','mining',1,1),
          ('copper arrow', 'crafting', 1, 1),
          ('copper sword', 'crafting', 1, 1),
          ('iron sword', 'crafting', 1,2),
-         ('bow', 'crafting', 1,1 )
+         ('bow', 'crafting', 1,1 ),
+         ('carrot', 'gathering', 1, 1),
+         ('cooked carrot', 'cooking', 1, 1)
          ]
 cursor.executemany("INSERT OR IGNORE INTO Item (item_name, category_id, difficulty, xp_reward) VALUES (?, (SELECT category_id FROM Category WHERE category_name = ?), ?, ?)", items)
 sql_conn.commit()
@@ -53,7 +55,8 @@ recipes = [
     ('copper sword', 'wood plank', 1),
     ('copper sword', 'copper ingot', 1),
     ('iron sword', 'iron ingot', 1),
-    ('iron sword', 'wood plank', 1)
+    ('iron sword', 'wood plank', 1),
+    ('cooked carrot', 'carrot', 1)
 ]
 
 sql = """INSERT OR IGNORE INTO Recipe (product_item_id, ingredient_item_id, amount) 

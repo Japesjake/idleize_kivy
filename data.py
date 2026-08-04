@@ -10,15 +10,19 @@ data = {'copper ore': 0,
         'copper arrow': 0,
         'copper sword': 0,
         'iron sword': 0,
-        'bow': 0}
+        'bow': 0,
+        'carrot': 0,
+        'cooked carrot': 0}
 xps = {'mining': 0, 
        'smelting': 0, 
        'crafting': 0, 
-       'gathering': 0}
+       'gathering': 0,
+       'cooking': 0}
 groups = {'mining': ('copper ore', 'iron ore'),
           'smelting': ('copper ingot', 'iron ingot'),
           'crafting': ('copper armor','copper sword', 'iron armor', 'iron sword', 'copper arrow'), 
-          'gathering':('wood', 'stick')}
+          'gathering':('wood', 'stick', 'wood plank', 'carrot'),
+          'cooking':('cooked carrot',)}
 recipies = {'copper ingot': {'copper ore': 1}, 
             'iron ingot': {'iron ore': 1}, 
             'copper armor': {'copper ingot': 1}, 
@@ -27,7 +31,8 @@ recipies = {'copper ingot': {'copper ore': 1},
             'iron sword': {'copper ingot': 1, 'wood plank': 1}, 
             'stick': {'wood': 1}, 
             'wood plank': {'wood': 1},
-            'copper arrow': {'copper ingot': 1, 'stick': 1}}
+            'copper arrow': {'copper ingot': 1, 'stick': 1},
+            'cooked carrot': {'carrot': 1}}
 xp_values = {'copper ore': 1, 
              'iron ore': 2, 
              'copper ingot': 1, 
@@ -37,7 +42,9 @@ xp_values = {'copper ore': 1,
              'wood':1, 
              'wood plank:1'
              'stick':1,
-             'copper arrow': 1}
+             'copper arrow': 1,
+             'carrot': 1,
+             'cooked carrot': 1}
 difficulties = {'copper ore': 1, 
                 'iron ore': 1, 
                 'copper ingot': 1, 
@@ -49,7 +56,9 @@ difficulties = {'copper ore': 1,
                 'stick': 1, 
                 'copper arrow': 1,
                 'copper sword': 1,
-                'iron sword': 1}
+                'iron sword': 1,
+                'carrot': 1,
+                'cooked carrot': 1}
                 
 enemies = {
     'rat': {'hp': 5, 'attack': 1, 'defense': 1}
