@@ -161,8 +161,8 @@ class Idleize(App):
         return self.main
     def idle_thread(self):
         while True:
-            item = self.item
             while self.idling:
+                item = self.item
                 if 'fight' in item:
                     send_json(client, item)
                     Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(1))
