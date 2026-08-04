@@ -16,7 +16,6 @@ HOST = 'localhost'
 PORT = 1235
 
 Builder.load_file('main.kv')
-
 def create_data():
     with open('data.p', 'wb') as file:
         pickle.dump(data, file)
@@ -99,7 +98,8 @@ class MainLayout(Screen):
     def animate(self, duration):
         self.ids.pb.value = 0
         anim = Animation(value=100, duration=duration)
-        anim.start(self.ids.pb)  
+        anim.start(self.ids.pb)
+        App.get_running_app().populate_inventory()
  
 
 class WindowManager(ScreenManager):
@@ -114,7 +114,6 @@ class Idleize(App):
         hps = DictProperty(pickle.load(file))
     with open('equipped.p', 'rb') as file:
         equipped = DictProperty(pickle.load(file))
-    # print(equipped)
     player_name = 'JpJab'
     item = 'copper ore'
     idling = False
@@ -136,7 +135,7 @@ class Idleize(App):
         def apply_update(dt):
             self.equipped = new_equipped
         Clock.schedule_once(apply_update)
-        def send_equip_worker():
+        def send_equip_worker(): 
             try:
                 payload = ['equip ', name]
                 send_json(client, payload)
@@ -164,6 +163,43 @@ class Idleize(App):
             while self.idling:
                 if 'fight' in item:
                     send_json(client, item)
+                    Clock.schedule_once(lambda dt: self.root.get_screen('main').animate(1))
+                    time.sleep(1)
+                    print('fighting...')
+                    print(1)
+                    enemy = item.removeprefix('fight ')
+                    enemy_base_hp = self.enemies.get(enemy).get('hp')
+                    enemy_actual_hp = self.hps.get(enemy)
+                    enemy_attack = self.enemies.get(enemy).get('attack')
+                    enemy_defense = self.enemies.get(enemy).get('defense')
+                    player_max_hp = self.player_stats.get('hp')
+                    player_actual_hp = self.hps.get('player')
+                    equipped_weapon = self.equipped.get('right')
+                    equipped_armor = self.equipped.get('body')
+                    equipped_weapon_type = self.equippables.get(equipped_weapon)
+                    equipped_armor_type = self.equippables.get(equipped_armor)
+                    if equipped_weapon_type == 'strength':
+                        player_attack = self.equipment_stats.get(equipped_weapon)
+                    elif equipped_weapon_type == 'dexterity':
+                        player_attack = self.player_stats.get('dexterity')
+                    if equipped_armor_type == 'strength':
+                        player_defense = self.equipment_stats.get(equipped_armor)
+                    elif equipped_armor_type == 'dexterity':
+                        player_defense = self.player_stats.get('dexterity')
+                    enemy_hits = (enemy_attack + random.randint(-5, 5)) - (player_defense + random.randint(-5, 5)) > 0
+                    player_hits = (player_attack + random.randint(-5, 5)) - (enemy_defense + random.randint(-5,5)) > 0
+                    new_hps = dict(self.hps)
+                    if enemy_hits:
+                        new_hps['player'] -= enemy_attack
+                    if player_hits:
+                        new_hps[enemy] -= player_attack
+                    def apply_hp_update(dt):
+                        self.hps = new_hps
+                        print(self.hps)
+                    Clock.schedule_once(apply_hp_update)
+                    if self.hps['player'] <= 0 or self.hps[enemy] <= 0:
+                        self.idling = False
+                        break 
                 else:
                     for key, value in self.groups.items():
                         if item in value:

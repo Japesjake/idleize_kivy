@@ -54,13 +54,13 @@ player_stats = {
     'dexterity': 1,
     'defense': 1,
     'max hp': 10,
-    'armor type': 'strength',
 }
 
 equipment_stats = {
     'copper armor': 1,
     'copper sword': 1,
-    'bow': 1
+    'iron armor': 2,
+    'iron sword': 2,
 }
 
 equipped = {
