@@ -28,7 +28,7 @@ items = [('copper ore','mining',1,1),
          ('iron armor','crafting',500,2), 
          ('wood','gathering',1,1),
          ('wood plank','gathering',1,2),
-         ('stick', 'gathering', 1, 1), 
+         ('stick', 'gathering', 1, 1),
          ('copper arrow', 'crafting', 1, 1),
          ('copper sword', 'crafting', 1, 1)
          ]
@@ -57,8 +57,6 @@ sql = """INSERT OR IGNORE INTO Recipe (product_item_id, ingredient_item_id, amou
                  (SELECT item_id FROM Item WHERE item_name = ?), ?)"""
 cursor.executemany(sql, recipes)
 
-# sql = """INSERT OR IGNORE INTO EquippedItems (player_id, slot_name, item_id)"""
-# cursor.execute(sql, (1, 'body', ))
 sql_conn.commit()
 sql_conn.close()
 
@@ -108,7 +106,7 @@ class Server():
                     print(f"[{addr}] says: {data}")
 
                     # Login Handshake Block
-                    if isinstance(data, list) and len(data) == 2:
+                    if isinstance(data, list) and len(data) == 2 and data[0] != 'equip ':
                         username = data[0]
                         password = data[1]
                         print(f'received username: {username} password: [redacted] from client')
@@ -175,6 +173,18 @@ class Server():
                             idle_thread = Idle_thread(username, data, conn, addr)
                             idle_threads.append(idle_thread)
                             idle_thread.thread.start()
+                    elif data[0] == 'equip ':
+                        item = data[1]
+                        if 'armor' in item:
+                            slot = 'chest'
+                        elif 'sword' in item or 'bow' in item:
+                            slot = 'right'
+                        sql = "DELETE FROM EquippedItems WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND slot_name = ?"
+                        cursor.execute(sql, (username, slot))
+                        sql = "INSERT OR IGNORE INTO EquippedItems (player_id, slot_name, item_id) VALUES ((SELECT player_id FROM Player WHERE Player.name = ?) ,?, (SELECT item_id FROM item WHERE item_name = ?))"
+                        cursor.execute(sql,(username, slot, item))
+                        print(f'equipped {item}')
+                        sql_connection.commit()
             
         except (ConnectionResetError, ConnectionError):
             pass
@@ -237,12 +247,11 @@ class Idle_thread():
             cursor.execute(sql, (player_id,10,1,1,1,10))
             while self.idling:
                 if 'fight' in self.item:
-                    pass
-                    # time.sleep(1)
-                    # enemy = self.item.removeprefix('fight ')
-                    # sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
-                    # cursor.execute(sql,(player_id,))
-                    # s = cursor.fetchall()
+                    time.sleep(1)
+                    enemy = self.item.removeprefix('fight ')
+                    sql = 'SELECT hp, strength, dexterity, defense, max_hp FROM PlayerStats WHERE player_id = ?'
+                    cursor.execute(sql,(player_id,))
+                    s = cursor.fetchall()
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"
                     cursor.execute(sql, (self.item,))

@@ -5,9 +5,9 @@ try:
         cursor = connection.cursor()
 except sqlite3.Error: print('error connecting to database')
 
-sql = "INSERT OR IGNORE INTO PlayerXP (player_id, category_id, xp) VALUES ((SELECT player_id FROM Player WHERE name = ?),(SELECT category_id FROM Item WHERE item_name = ?),0)"
-cursor.execute(sql, ('JpJab', 'copper ore'))
-connection.commit()
+# sql = "INSERT OR IGNORE INTO PlayerXP (player_id, category_id, xp) VALUES ((SELECT player_id FROM Player WHERE name = ?),(SELECT category_id FROM Item WHERE item_name = ?),0)"
+# cursor.execute(sql, ('JpJab', 'copper ore'))
+# connection.commit()
 
 
 
@@ -73,9 +73,9 @@ connection.commit()
 # connection.commit()
 # connection.close()
 
-# cursor.execute("INSERT INTO PlayerItem (player_id, item_id, count) VALUES (1,2,0);")
-# connection.commit()
-# connection.close()
+cursor.execute("INSERT INTO PlayerItem (player_id, item_id, count) VALUES (1,5,1);")
+connection.commit()
+connection.close()
 
 # cursor.execute("SELECT P.name, I.item_name FROM PlayerItem PI JOIN Player P ON P.player_id = PI.player_id JOIN Item I ON I.item_id = PI.item_id WHERE p.name = 'JpJab';")
 # cursor.execute("SELECT * FROM item")
