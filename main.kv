@@ -127,9 +127,9 @@
                         GridLayout:
                             cols: 1
                             Label:
-                                text: str(app.equipped['body'])
+                                text: 'body: ' + '\n' + str(app.equipped['body'])
                             Label:
-                                text: str(app.equipped['right'])
+                                text: 'right hand: ' + '\n' + str(app.equipped['right'])
                         ScrollView:
                             do_scroll_x: False
                             do_scroll_y: True

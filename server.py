@@ -20,7 +20,11 @@ categories = [('mining',), ('smelting',), ('crafting',), ('gathering',), ('cooki
 sql = "INSERT OR IGNORE INTO Category (category_name) VALUES (?)"
 cursor.executemany(sql, categories)
 
-items = [('copper ore','mining',1,1), 
+enemies = [('rat',5,1,1,1)]
+sql = "INSERT OR IGNORE INTO Enemy (enemy_name, hp, attack, defense, damage) VALUES (?,?,?,?,?)"
+cursor.executemany(sql, enemies)
+
+items = [('copper ore','mining',1,1),
          ('iron ore','mining',1,2), 
          ('copper ingot', 'smelting',1,1), 
          ('iron ingot','smelting',1,2), 
@@ -43,6 +47,26 @@ cursor.execute("SELECT item_name FROM Item")
 items = cursor.fetchall()
 items = [item[0] for item in items]
 
+item_slots = [('body',),('right',)]
+sql = 'INSERT OR IGNORE INTO Slot (slot_name) VALUES (?)'
+cursor.executemany(sql, item_slots)
+sql_conn.commit()
+
+item_types = [('strength',),('dexterity',)]
+sql = 'INSERT OR IGNORE INTO ItemType (item_type_name) VALUES (?)'
+cursor.executemany(sql, item_types)
+sql_conn.commit()
+
+item_stats = [('copper armor', 1, 'body', 'strength'), 
+              ('copper sword', 1, 'right', 'strength'), 
+              ('iron armor', 2, 'body', 'strength'), 
+              ('iron sword', 2, 'right', 'strength')]
+sql = 'INSERT OR IGNORE INTO ItemStats (item_id, stat, slot_id, item_type_id) VALUES ((SELECT item_id FROM Item WHERE item_name = ?), ?, (SELECT slot_id FROM Slot WHERE slot_name = ?), (SELECT item_type_id FROM ItemType WHERE item_type_name = ?))'
+cursor.executemany(sql, item_stats)
+sql_conn.commit()
+
+
+
 recipes = [
     ('iron ingot', 'iron ore', 1),
     ('copper ingot', 'copper ore', 1),
@@ -63,8 +87,8 @@ sql = """INSERT OR IGNORE INTO Recipe (product_item_id, ingredient_item_id, amou
          VALUES ((SELECT item_id FROM Item WHERE item_name = ?), 
                  (SELECT item_id FROM Item WHERE item_name = ?), ?)"""
 cursor.executemany(sql, recipes)
-
 sql_conn.commit()
+
 sql_conn.close()
 
 # Helper utilities for safe line-buffered serialization
@@ -186,10 +210,10 @@ class Server():
                             slot = 'body'
                         elif 'sword' in item or 'bow' in item:
                             slot = 'right'
-                        sql = "DELETE FROM EquippedItems WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND slot_name = ?"
+                        sql = "DELETE FROM EquippedItem WHERE player_id = (SELECT player_id FROM Player WHERE name = ?) AND slot_id = (SELECT slot_id FROM Slot WHERE slot_name = ?)"
                         cursor.execute(sql, (username, slot))
                         sql_connection.commit()
-                        sql = "INSERT INTO EquippedItems (player_id, slot_name, item_id) VALUES ((SELECT player_id FROM Player WHERE Player.name = ?) ,?, (SELECT item_id FROM item WHERE item_name = ?))"
+                        sql = "INSERT INTO EquippedItem (player_id, slot_id, item_id) VALUES ((SELECT player_id FROM Player WHERE Player.name = ?) ,(SELECT slot_id FROM Slot WHERE slot_name = ?), (SELECT item_id FROM Item WHERE item_name = ?))"
                         cursor.execute(sql,(username, slot, item))
                         print(f'equipped {item}')
                         sql_connection.commit()
@@ -228,6 +252,9 @@ class Server():
             sql = "SELECT Category.category_name, PlayerXP.xp FROM PlayerXP JOIN Category ON PlayerXP.category_id = Category.category_id JOIN Player ON PlayerXP.player_id = Player.player_id WHERE Player.name = ?"
             cursor.execute(sql, (username,))
             experience = cursor.fetchall()
+
+            # sql = "SELECT "
+            ### add sql query for hps here to send over to client ###
             
             msg = {"inventory": inventory, "experience": experience}
             print(f'Inventory and Experience data sent to client')
@@ -256,16 +283,17 @@ class Idle_thread():
             cursor.execute(sql, (player_id,10,1,1,1,10))
             while self.idling:
                 if 'fight' in self.item:
-                    time.sleep(1)
+                    time.sleep(1.1)
                     enemy = self.item.removeprefix('fight ')
-                    sql = 'SELECT hp, strength, dexterity, max_hp FROM PlayerStats WHERE player_id = ?'
+                    sql = 'SELECT strength, dexterity, max_hp FROM PlayerStats WHERE player_id = ?'
                     cursor.execute(sql,(player_id,))
                     stats = cursor.fetchall()
-                    player_hp = stats[0]
-                    player_strength = stats[1]
-                    player_dexterity = stats[2]
-                    player_max_hp = stats[3]
+                    player_strength = stats[0][0]
+                    player_dexterity = stats[0][1]
+                    player_max_hp = stats[0][2]
                     ##### fight logic here #####
+                    sql = 'SELECT '
+
                     
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"

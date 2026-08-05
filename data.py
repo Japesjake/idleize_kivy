@@ -13,9 +13,9 @@ data = {'copper ore': 0,
         'bow': 0,
         'carrot': 0,
         'cooked carrot': 0}
-xps = {'mining': 0, 
-       'smelting': 0, 
-       'crafting': 0, 
+xps = {'mining': 0,
+       'smelting': 0,
+       'crafting': 0,
        'gathering': 0,
        'cooking': 0}
 groups = {'mining': ('copper ore', 'iron ore'),
@@ -61,25 +61,24 @@ difficulties = {'copper ore': 1,
                 'cooked carrot': 1}
                 
 enemies = {
-    'rat': {'hp': 5, 'attack': 1, 'defense': 1}
+    'rat': {'hp': 5, 'attack': 1, 'defense': 1, 'damage': 1}
 }
 hps = {
     'player': 10,
     'rat': 5
 }
 player_stats = {
-    'hp': 10,
     'strength': 1,
     'dexterity': 1,
-    'defense': 1,
-    'max hp': 10,
+    'max hp': 10
 }
-
+## strength weapon = damage
+## strength armor = defense
 equipment_stats = {
     'copper armor': 1,
     'copper sword': 1,
     'iron armor': 2,
-    'iron sword': 2,
+    'iron sword': 2
 }
 
 equipped = {
@@ -88,10 +87,11 @@ equipped = {
 }
 
 equippables = {
-    'copper armor': 'strength', 
+    'copper armor': 'strength',
     'iron armor': 'strength',
-    'copper sword': 'strength', 
+    'copper sword': 'strength',
     'iron sword': 'strength',
     'leather armor': 'dexterity',
-    'bow': 'dexterity'
+    'bow': 'dexterity',
+    'cooked carrot': 'consumable'
 }

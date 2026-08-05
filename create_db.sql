@@ -48,8 +48,10 @@ CREATE TABLE IF NOT EXISTS Recipe (
 
 CREATE TABLE IF NOT EXISTS Enemy (
     enemy_id INTEGER PRIMARY KEY,
+    enemy_name VARCHAR(255) NOT NULL UNIQUE,
     hp INTEGER,
     attack INTEGER,
+    damage INTEGER,
     defense INTEGER
 );
 
@@ -63,23 +65,50 @@ CREATE TABLE IF NOT EXISTS PlayerStats (
     FOREIGN KEY (player_id) REFERENCES Player(player_id)
 );
 
-CREATE TABLE IF NOT EXISTS EquippedItems (
+CREATE TABLE IF NOT EXISTS EquippedItem (
     player_id INTEGER NOT NULL,
-    slot_name TEXT NOT NULL,
+    slot_id INTEGER NOT NULL,
     item_id INTEGER NOT NULL,
-    PRIMARY KEY (player_id, slot_name),
+    PRIMARY KEY (player_id, slot_id),
     FOREIGN KEY (player_id) REFERENCES Player(player_id),
-    FOREIGN KEY (item_id) REFERENCES Item(item_id)
+    FOREIGN KEY (item_id) REFERENCES Item(item_id),
+    FOREIGN KEY (slot_id) REFERENCES Slot(slot_id)
 );
 
-CREATE TABLE IF NOT EXISTS WeaponStats (
-    item_id INTEGER PRIMARY KEY,
-    attack INTEGER DEFAULT 1,
-    FOREIGN KEY (item_id) REFERENCES Item(item_id)
+CREATE TABLE IF NOT EXISTS Hitpoints (
+    player_id INTEGER NOT NULL,
+    enemy_id INTEGER,
+    hp INTEGER NOT NULL,
+    PRIMARY KEY (player_id, enemy_id),
+    FOREIGN KEY (player_id) REFERENCES Player(player_id)
 );
 
-CREATE TABLE IF NOT EXISTS ArmorStats (
-    item_id INTEGER PRIMARY KEY,
-    defense INTEGER DEFAULT 1,
-    FOREIGN KEY (item_id) REFERENCES Item(item_id)
+CREATE TABLE IF NOT EXISTS Slot (
+    slot_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    slot_name VARCHAR(255) NOT NULL UNIQUE
 );
+
+CREATE TABLE IF NOT EXISTS ItemType (
+    item_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_type_name VARCHAR(255) UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS ItemStats (
+    item_id INTEGER NOT NULL PRIMARY KEY,
+    stat INTEGER NOT NULL,
+    slot_id INTEGER,
+    item_type_id VARCHAR(255),
+    FOREIGN KEY (item_type_id) REFERENCES ItemType(item_type_id)
+);
+
+-- CREATE TABLE IF NOT EXISTS WeaponStats (
+--     item_id INTEGER PRIMARY KEY,
+--     attack INTEGER DEFAULT 1,
+--     FOREIGN KEY (item_id) REFERENCES Item(item_id)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS ArmorStats (
+--     item_id INTEGER PRIMARY KEY,
+--     defense INTEGER DEFAULT 1,
+--     FOREIGN KEY (item_id) REFERENCES Item(item_id)
+-- );

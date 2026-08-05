@@ -73,7 +73,11 @@ except sqlite3.Error: print('error connecting to database')
 # connection.commit()
 # connection.close()
 
-cursor.execute("INSERT INTO PlayerItem (player_id, item_id, count) VALUES (1,5,1);")
+# cursor.execute("INSERT INTO PlayerItem (player_id, item_id, count) VALUES (1,5,1);")
+# connection.commit()
+# connection.close()
+
+cursor.execute("DROP TABLE Enemy")
 connection.commit()
 connection.close()
 

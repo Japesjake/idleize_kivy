@@ -136,7 +136,7 @@ class Idleize(App):
         def apply_update(dt):
             self.equipped = new_equipped
         Clock.schedule_once(apply_update)
-        def send_equip_worker(): 
+        def send_equip_worker():
             try:
                 payload = ['equip ', name]
                 send_json(client, payload)
@@ -170,38 +170,50 @@ class Idleize(App):
                     print('fighting...')
                     print(1)
                     enemy = item.removeprefix('fight ')
-                    enemy_base_hp = self.enemies.get(enemy).get('hp')
-                    enemy_actual_hp = self.hps.get(enemy)
                     enemy_attack = self.enemies.get(enemy).get('attack')
+                    enemy_damage = self.enemies.get(enemy).get('damage')
                     enemy_defense = self.enemies.get(enemy).get('defense')
-                    player_max_hp = self.player_stats.get('hp')
-                    player_actual_hp = self.hps.get('player')
                     equipped_weapon = self.equipped.get('right')
                     equipped_armor = self.equipped.get('body')
                     equipped_weapon_type = self.equippables.get(equipped_weapon)
                     equipped_armor_type = self.equippables.get(equipped_armor)
+                    ### Strength Weapon ###
                     if equipped_weapon_type == 'strength':
-                        player_attack = self.equipment_stats.get(equipped_weapon)
+                        player_attack = self.player_stats.get('strength')
+                        player_damage = self.equipment_stats.get(equipped_weapon)
+                    ### Dexterity Weapon ###
                     elif equipped_weapon_type == 'dexterity':
                         player_attack = self.player_stats.get('dexterity')
+                        player_damage = self.equipment_stats.get(equipped_weapon)
+                    if equipped_weapon == '':
+                        player_attack = 0
+                        player_damage = 0
+                    ### Strength Armor ###
                     if equipped_armor_type == 'strength':
                         player_defense = self.equipment_stats.get(equipped_armor)
+                    ### Dexterity Armor ###
                     elif equipped_armor_type == 'dexterity':
                         player_defense = self.player_stats.get('dexterity')
+                        modifier = self.equipment_stats.get(equipped_weapon)
+                        player_defense += modifier
+                    if equipped_armor == '':
+                        player_defense = 0
+                        player_damage = 0
                     enemy_hits = (enemy_attack + random.randint(-5, 5)) - (player_defense + random.randint(-5, 5)) > 0
                     player_hits = (player_attack + random.randint(-5, 5)) - (enemy_defense + random.randint(-5,5)) > 0
                     new_hps = dict(self.hps)
                     if enemy_hits:
-                        new_hps['player'] -= enemy_attack
+                        new_hps['player'] -= enemy_damage
                     if player_hits:
-                        new_hps[enemy] -= player_attack
+                        new_hps[enemy] -= player_damage
+                    if new_hps['player'] <= 0 or new_hps[enemy] <= 0:
+                        self.idling = False
+                        new_hps[enemy] = self.enemies.get('rat').get('hp')
+                        new_hps['player'] = 10 ##### REMOVE THIS LATER
                     def apply_hp_update(dt):
                         self.hps = new_hps
                         print(self.hps)
                     Clock.schedule_once(apply_hp_update)
-                    if self.hps['player'] <= 0 or self.hps[enemy] <= 0:
-                        self.idling = False
-                        break 
                 else:
                     for key, value in self.groups.items():
                         if item in value:
@@ -281,6 +293,8 @@ class Idleize(App):
                 for category_name, xp_value in response.get('experience', []):
                     new_xps[category_name] = xp_value
                 self.xps = new_xps
+
+                ### add hp info here ###
             Clock.schedule_once(apply_sync)
 
     def verify_credentials(self, username, password):
@@ -385,6 +399,10 @@ class Idleize(App):
             pickle.dump(dict(self.data), file)
         with open('xps.p', "wb") as file:
             pickle.dump(dict(self.xps), file)
+        with open('equipped.p', "wb") as file:
+            pickle.dump(dict(self.equipped), file)
+        with open('hps.p', "wb") as file:
+            pickle.dump(dict(self.hps), file)
 
 if __name__ == "__main__":
     Idleize().run()
