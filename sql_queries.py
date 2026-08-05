@@ -77,7 +77,7 @@ except sqlite3.Error: print('error connecting to database')
 # connection.commit()
 # connection.close()
 
-cursor.execute("DROP TABLE Enemy")
+cursor.execute("DROP TABLE Hitpoints")
 connection.commit()
 connection.close()
 

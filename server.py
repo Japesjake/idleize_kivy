@@ -1,5 +1,5 @@
 import socket
-import threading, time, sqlite3, json, bcrypt
+import threading, time, sqlite3, json, bcrypt, random
 
 host = '0.0.0.0'
 port = 1235
@@ -288,13 +288,97 @@ class Idle_thread():
                     sql = 'SELECT strength, dexterity, max_hp FROM PlayerStats WHERE player_id = ?'
                     cursor.execute(sql,(player_id,))
                     stats = cursor.fetchall()
-                    player_strength = stats[0][0]
-                    player_dexterity = stats[0][1]
-                    player_max_hp = stats[0][2]
-                    ##### fight logic here #####
-                    sql = 'SELECT '
+                    player_strength, player_dexterity, player_max_hp = stats[0]
+                    sql = 'SELECT hp, attack, damage, defense FROM Enemy WHERE enemy_name = ?;'
+                    cursor.execute(sql,(enemy,))
+                    stats = cursor.fetchall()
+                    enemy_max_hp, enemy_attack, enemy_damage, enemy_defense = stats[0]
+
+                    sql = 'INSERT OR IGNORE INTO Hitpoints (player_id, enemy_id, hp) VALUES (?, (SELECT enemy_id FROM Enemy WHERE enemy_name = ?), ?);'
+                    cursor.execute(sql,(player_id, enemy, enemy_max_hp))
+                    sql_conn.commit()
+
+                    sql = 'INSERT OR IGNORE INTO Hitpoints (player_id, hp) VALUES (?, ?);'
+                    cursor.execute(sql,(player_id, player_max_hp))
+                    sql_conn.commit()
+
+
+                    sql = 'SELECT item_id FROM EquippedItem WHERE player_id = ? AND slot_id = (SELECT slot_id FROM Slot WHERE slot_name = ?)'
+                    cursor.execute(sql,(player_id, 'body'))
+                    body_item_id = cursor.fetchone()[0]
+
+                    sql = 'SELECT item_id FROM EquippedItem WHERE player_id = ? AND slot_id = (SELECT slot_id FROM Slot WHERE slot_name = ?)'
+                    cursor.execute(sql,(player_id, 'right'))
+                    right_item_id = cursor.fetchone()[0]
 
                     
+                    sql = 'SELECT stat, item_type_id FROM ItemStats WHERE item_id = ?'
+                    cursor.execute(sql,(body_item_id,))
+                    body_stat, body_type_id = cursor.fetchall()[0]
+
+                    sql = 'SELECT item_type_name FROM ItemType WHERE item_type_id = ?'
+                    cursor.execute(sql,(body_type_id,))
+                    body_type = cursor.fetchone()[0]
+
+                    sql = 'SELECT stat, item_type_id FROM ItemStats WHERE item_id = ?'
+                    cursor.execute(sql,(right_item_id,))
+                    right_stat, right_type_id = cursor.fetchall()[0]
+
+                    sql = 'SELECT item_type_name FROM ItemType WHERE item_type_id = ?'
+                    cursor.execute(sql,(right_type_id,))
+                    right_type = cursor.fetchone()[0]
+
+                    if right_type == 'strength':
+                        player_attack = player_strength
+                        player_damage = right_stat
+                    elif right_type == 'dexterity':
+                        player_attack = player_dexterity
+                        player_damage = right_stat
+                    if right_item_id == False:
+                        player_attack = 0
+                        player_damage = 0
+                    if body_type == 'strength':
+                        player_defense = body_stat
+                    elif body_type == 'dexterity':
+                        player_defense = player_dexterity + body_stat
+                    if body_item_id == False:
+                        player_defense = 0
+                    enemy_hits = (enemy_attack + random.randint(-5, 5)) - (player_defense + random.randint(-5, 5)) > 0
+                    player_hits = (player_attack + random.randint(-5, 5)) - (enemy_defense + random.randint(-5,5)) > 0
+                    if player_hits:
+                        sql = 'UPDATE Hitpoints SET hp = hp - ? WHERE player_id = ? AND enemy_id = (SELECT enemy_id FROM Enemy WHERE enemy_name = ?)'
+                        cursor.execute(sql,(player_damage,player_id,enemy))
+                        sql_conn.commit()
+                    if enemy_hits:
+                        sql = 'UPDATE Hitpoints SET hp = hp - ? WHERE player_id = ? AND enemy_id = 0'
+                        cursor.execute(sql,(enemy_damage,player_id))
+                        sql_conn.commit()
+                    sql = 'SELECT hp FROM Hitpoints WHERE player_id = ? AND enemy_id = (SELECT enemy_id FROM Enemy WHERE enemy_name = ?)'
+                    cursor.execute(sql, (player_id,enemy))
+                    enemy_hp = cursor.fetchone()[0]
+
+                    sql = 'SELECT hp FROM Hitpoints WHERE player_id = ? AND enemy_id = ?'
+                    cursor.execute(sql, (player_id,0))
+                    player_hp = cursor.fetchone()[0]                    
+                    print(f"{enemy}'s hp: {enemy_hp}. Player's hp: {player_hp}")
+
+                    combat_payload = {
+                        'player_hit': player_hits,
+                        'player_damage': player_damage,
+                        'enemy_hit': enemy_hits,
+                        'enemy_damage': enemy_damage
+                    }
+                    send_json(self.conn, combat_payload)
+
+                    if enemy_hp <= 0 or player_hp <= 0:
+                        sql = 'UPDATE Hitpoints SET hp = ? WHERE player_id = ? AND enemy_id = (SELECT enemy_id FROM Enemy WHERE enemy_name = ?)'
+                        cursor.execute(sql, (enemy_max_hp, player_id, enemy))
+                        sql_conn.commit()
+
+                        sql = 'UPDATE Hitpoints SET hp = ? WHERE player_id = ? AND enemy_id = ?'
+                        cursor.execute(sql, (player_max_hp, player_id, 0))
+                        sql_conn.commit()
+                        break
                 else:
                     sql = "SELECT category_id FROM Item WHERE item_name = ?"
                     cursor.execute(sql, (self.item,))
@@ -357,7 +441,7 @@ class Idle_thread():
                     count = cursor.fetchone()
 
                     cursor.execute("""
-                    SELECT px.xp 
+                    SELECT px.xp
                     FROM PlayerXP px
                     JOIN Item i ON px.category_id = i.category_id
                     WHERE px.player_id = ? AND i.item_name = ?

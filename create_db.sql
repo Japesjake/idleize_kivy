@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS Enemy (
 );
 
 CREATE TABLE IF NOT EXISTS PlayerStats (
-    player_id INTEGER PRIMARY KEY,
+    player_id INTEGER PRIMARY KEY UNIQUE,
     hp INTEGER,
     strength INTEGER,
     dexterity INTEGER,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS EquippedItem (
 
 CREATE TABLE IF NOT EXISTS Hitpoints (
     player_id INTEGER NOT NULL,
-    enemy_id INTEGER,
+    enemy_id INTEGER DEFAULT 0,
     hp INTEGER NOT NULL,
     PRIMARY KEY (player_id, enemy_id),
     FOREIGN KEY (player_id) REFERENCES Player(player_id)
