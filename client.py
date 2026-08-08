@@ -5,6 +5,7 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
+from kivy.uix.anchorlayout import AnchorLayout
 
 host = 'localhost'
 port = 1235
@@ -48,19 +49,44 @@ listening_thread.start()
 class LoginScreen(Screen):
     def __init__(self, **kw):
         super().__init__(**kw)
-        layout = BoxLayout(orientation='vertical')
-        layout.add_widget(Label(text='Welcome to Idleize \n Please login below'))
-        username_input = TextInput(hint_text='username',
-                                   size_hint=(0.5,None),
-                                   height=40,
-                                   pos_hint={'center_x': 0.5})
-        password_input = TextInput(hint_text='password',
-                                   size_hint=(0.5,None),
-                                   height=40,
-                                   pos_hint={'center_x': 0.5})
-        layout.add_widget(username_input)
-        layout.add_widget(password_input) 
-        self.add_widget(layout)
+        root_anchor = AnchorLayout(anchor_x='center', anchor_y='center')
+
+        # 2. Inner BoxLayout holds the widgets with a fixed height so it won't stretch vertically
+        card = BoxLayout(
+            orientation='vertical',
+            spacing=10,
+            size_hint=(0.5, None),  # 50% screen width
+            height=220,  # Fixed total height prevents vertical stretching
+        )
+
+        title_label = Label(
+            text='Welcome to Idleize \n Please login below',
+            halign='center',
+            size_hint_y=None,
+            height=60,
+        )
+
+        username_input = TextInput(
+            hint_text='username',
+            multiline=False,
+            size_hint_y=None,
+            height=40,
+        )
+
+        password_input = TextInput(
+            hint_text='password',
+            password=True,
+            multiline=False,
+            size_hint_y=None,
+            height=40,
+        )
+        card.add_widget(title_label)
+        card.add_widget(username_input)
+        card.add_widget(password_input)
+
+        root_anchor.add_widget(card)
+        self.add_widget(root_anchor)
+
 
 class Idleize(App):
     def build(self):
