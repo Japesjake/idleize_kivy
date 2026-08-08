@@ -10,7 +10,6 @@ from kivy.uix.anchorlayout import AnchorLayout
 host = 'localhost'
 port = 1235
 
-global sock
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect((host, port))
 
@@ -32,14 +31,11 @@ def recv_json():
     except json.JSONDecodeError:
         return None
 
-def handle_connection():
+def handle_connection(app_instance):
     while True:
         data = recv_json()
         print(data)
     sock.close()
-
-listening_thread = threading.Thread(target=handle_connection, daemon=True)
-listening_thread.start()
 
 
 
@@ -66,33 +62,58 @@ class LoginScreen(Screen):
             height=60,
         )
 
-        username_input = TextInput(
+        self.username_input = TextInput(
             hint_text='username',
             multiline=False,
             size_hint_y=None,
             height=40,
         )
 
-        password_input = TextInput(
+        self.password_input = TextInput(
             hint_text='password',
             password=True,
             multiline=False,
             size_hint_y=None,
             height=40,
         )
+        button_box = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=40
+        )
+        submit_button = Button(text='Submit',
+                               height=40,
+                               on_release=self.submit)
+        create_button = Button(text='Create New User',
+                                height=40,
+                                on_release=self.create_new)
+        button_box.add_widget(create_button)
+        button_box.add_widget(submit_button)
+
         card.add_widget(title_label)
-        card.add_widget(username_input)
-        card.add_widget(password_input)
+        card.add_widget(self.username_input)
+        card.add_widget(self.password_input)
+        card.add_widget(button_box)
 
         root_anchor.add_widget(card)
         self.add_widget(root_anchor)
-
+    def submit(self, instance):
+        send_json({'type': 'login', 'username': self.username_input.text, 'password': self.password_input.text})
+    def create_new(self, instance):
+        send_json({'type': 'new','username': self.username_input.text, 'password': self.password_input.text})
+class Main(Screen):
+    pass
 
 class Idleize(App):
     def build(self):
         sm = ScreenManager()
         sm.add_widget(LoginScreen(name='login'))
-        # sm.add_widget(Main(name='main'))
+        sm.add_widget(Main(name='main'))
         return sm
+    def on_start(self):
+        listening_thread = threading.Thread(target=handle_connection,args=(app,), daemon=True)
+        listening_thread.start()
 
-Idleize().run()
+
+app = Idleize()
+app.run()

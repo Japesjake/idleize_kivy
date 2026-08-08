@@ -54,6 +54,9 @@ class Server():
                     if bcrypt.checkpw(password.encode('utf-8'), server_password):
                         print('correct password')
                         send_json(conn, {'type': 'login', 'message': 'good'})
+                    else:
+                        print('incorrect password')
+                        send_json(conn, {'type': 'login', 'message': 'bad'})
                 else:
                     print(f'username not found.')
                     send_json(conn, {'type': 'login', 'message': 'bad'})
@@ -61,7 +64,10 @@ class Server():
                 username = data.get('username')
                 password = data.get('password')
                 hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-                cursor.execute("INSERT INTO Player (username, password) VALUES (?,?)",(username, hashed_password))
+                try:
+                    cursor.execute("INSERT INTO Player (username, password) VALUES (?,?)",(username, hashed_password))
+                except sqlite3.IntegrityError:
+                    print('Username already exists.')
                 sql_conn.commit()
 
         conn.close()
