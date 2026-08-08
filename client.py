@@ -1,11 +1,12 @@
 import socket, json, threading
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.screenmanager import Screen, ScreenManager
+from kivy.uix.screenmanager import Screen, ScreenManager, FadeTransition
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.clock import Clock
 
 host = 'localhost'
 port = 1235
@@ -16,7 +17,6 @@ sock.connect((host, port))
 def send_json(data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
-
 def recv_json():
     data = b""
     while True:
@@ -30,18 +30,11 @@ def recv_json():
         return(json.loads(data.decode('utf-8')))
     except json.JSONDecodeError:
         return None
-
 def handle_connection(app_instance):
     while True:
         data = recv_json()
-        print(data)
+        Clock.schedule_once(lambda dt: app_instance.on_server_message(data))
     sock.close()
-
-
-
-# msg = {'type': 'login', 'username': 'JpJab', 'password': 'class'}
-# send_json(msg)
-
 class LoginScreen(Screen):
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -101,19 +94,57 @@ class LoginScreen(Screen):
         send_json({'type': 'login', 'username': self.username_input.text, 'password': self.password_input.text})
     def create_new(self, instance):
         send_json({'type': 'new','username': self.username_input.text, 'password': self.password_input.text})
-class Main(Screen):
-    pass
 
+class Tab(Screen):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.add_widget(Label(text=self.name))
+
+class Main(Screen):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        main_layout = BoxLayout(orientation='horizontal')
+        sidebar = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.25,
+            spacing=10,
+            padding=10
+        )
+        tabs = ['Character', 'Combat', 'Mining']
+        buttons = [Button(text=tab, size_hint_y=None, height=50) for tab in tabs]
+        for button, tab in zip(buttons, tabs):
+            button.bind(on_press=lambda instance, t=tab: self.switch_tab(t))
+            sidebar.add_widget(button)
+        sidebar.add_widget(Label())
+
+        self.tab_manager = ScreenManager(transition=FadeTransition(duration=0.15))
+        for tab in tabs:
+            self.tab_manager.add_widget(Tab(name=tab)) 
+
+        main_layout.add_widget(sidebar)
+        main_layout.add_widget(self.tab_manager)
+        self.add_widget(main_layout)
+    def switch_tab(self, tab_name):
+        self.tab_manager.current = tab_name
+
+          
 class Idleize(App):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        pass
     def build(self):
-        sm = ScreenManager()
-        sm.add_widget(LoginScreen(name='login'))
-        sm.add_widget(Main(name='main'))
-        return sm
+        self.sm = ScreenManager()
+        self.sm.add_widget(LoginScreen(name='login'))
+        self.sm.add_widget(Main(name='main'))
+        return self.sm
     def on_start(self):
         listening_thread = threading.Thread(target=handle_connection,args=(app,), daemon=True)
         listening_thread.start()
-
+    def on_server_message(self, data):
+        data_type = data.get('type')
+        if data_type == 'login' and data.get('message') == 'good':
+            self.sm.current = 'main'
+        print(data)
 
 app = Idleize()
 app.run()

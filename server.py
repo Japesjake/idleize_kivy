@@ -43,9 +43,9 @@ class Server():
             if data is None:
                 break
             print(f"[{addr}] says: {data}")
-            type = data.get('type')
+            data_type = data.get('type')
 
-            if type == 'login':
+            if data_type == 'login':
                 username = data.get('username')
                 password = data.get('password')
                 server_password = cursor.execute("SELECT password FROM Player WHERE username = ?",(username,)).fetchone()
@@ -60,7 +60,7 @@ class Server():
                 else:
                     print(f'username not found.')
                     send_json(conn, {'type': 'login', 'message': 'bad'})
-            elif type == 'new':
+            elif data_type == 'new':
                 username = data.get('username')
                 password = data.get('password')
                 hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
