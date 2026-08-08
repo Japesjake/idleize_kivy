@@ -1,0 +1,225 @@
+
+#:import NoTransition kivy.uix.screenmanager.NoTransition
+<ThickProgressBar>:
+    thickness: '20dp'
+    canvas:
+        # Background bar
+        Color:
+            rgb: 0.5, 0.5, 0.5
+        RoundedRectangle:
+            pos: self.pos
+            size: self.width, self.height
+        # Progress bar (the filling part)
+        Color:
+            rgb: 0, 1, 0  # Green
+        RoundedRectangle:
+            pos: self.pos
+            size: (self.width * (self.value / float(self.max))) if self.max else 0, self.height
+<CreateProfilePopup@Popup>:
+    title: "new"
+    size_hint: 0.7, 0.4
+    auto_dismiss: False
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+        Label:
+            text: "No profile found. Create a new one?"
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: 10
+            Button:
+                text: "Yes"
+                on_release:
+                    root.dismiss()
+                    app.confirm_new_profile_creation()
+            Button:
+                text: "No"
+                on_release: 
+                    root.dismiss()
+                    app.cancel_new_profile_creation() # <--- Tell the app we aborted
+<WindowManager>:
+    LoginScreen:
+    MainLayout:
+<LoginScreen>:
+    name: "login"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 50
+        spacing: 20
+        Label:
+            text: "Username"
+        TextInput:
+            id: username
+            multiline: False
+        Label:
+            text: "Password"
+        TextInput:
+            id: password
+            multiline: False
+            password: True
+        Button:
+            text: "Login"
+            on_release: root.verify()
+
+<MainLayout>:
+    orientation: 'horizontal'
+    name: 'main'
+    # Left Panel - Menu
+    BoxLayout:
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: 0.2
+            Button:
+                text: 'Character'
+                on_press: sm.current = 'Character'
+            Button:
+                text: 'Combat'
+                on_press: sm.current = 'Combat'
+            Button:
+                text: 'Mining'
+                on_press: sm.current = 'Mining'
+            Button:
+                text: 'Smelting'
+                on_press: sm.current = 'Smelting'
+            Button:
+                text: 'Crafting'
+                on_press: sm.current = 'Crafting'
+            Button:
+                text: 'Gathering'
+                on_press: sm.current = 'Gathering'
+            Button:
+                text: 'Cooking'
+                on_press: sm.current = 'Cooking'
+            Button:
+                text: 'sync data'
+                on_press: app.sync()
+                
+        # Right Panel - Content Area
+        BoxLayout:
+            orientation: 'vertical'
+            ScreenManager:
+                id: sm
+                transition: NoTransition()
+                Screen:
+                    name: 'Mining'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Mining XP: ' + str(app.xps['mining'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Copper Ore: ' + str(app.data['copper ore'])
+                                on_press: app.send('copper ore')
+                            Button:
+                                text: 'Iron Ore: ' + str(app.data['iron ore'])
+                                on_press: app.send('iron ore')
+                Screen:
+                    name: 'Character'
+                    GridLayout:
+                        cols: 2
+                        Label:
+                            text: 'Experience'
+                        Label:
+                            text: 'Mining: ' + str(app.xps['mining'])
+                        GridLayout:
+                            cols: 1
+                            Label:
+                                text: 'body: ' + '\n' + str(app.equipped['body'])
+                            Label:
+                                text: 'right hand: ' + '\n' + str(app.equipped['right'])
+                        ScrollView:
+                            do_scroll_x: False
+                            do_scroll_y: True
+
+                            BoxLayout:
+                                id: list_container
+                                orientation: 'vertical'
+                                size_hint_y: None
+                                height: self.minimum_height  # Critical: Automatically expands size
+                                spacing: 5
+                        
+
+                Screen:
+                    name: 'Combat'
+                    GridLayout:
+                        cols: 2
+                        Label:
+                            text: 'Player HP: ' + str(app.hps['player'])
+                        Button:
+                            text: 'Rat'
+                            on_press: app.send('fight rat')
+                Screen:
+                    name: 'Smelting'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Smelting XP: ' + str(app.xps['smelting'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Copper Ingot: ' + str(app.data['copper ingot'])
+                                on_press: app.send('copper ingot')
+                            Button:
+                                text: 'Iron Ingot: ' + str(app.data['iron ingot'])
+                                on_press: app.send('iron ingot')
+                Screen:
+                    name: 'Crafting'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Crafting XP: ' + str(app.xps['crafting'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Copper Armor: ' + str(app.data['copper armor'])
+                                on_press: app.send('copper armor')
+                            Button:
+                                text: 'Iron Armor: ' + str(app.data['iron armor'])
+                                on_press: app.send('iron armor')
+                            Button:
+                                text: 'Copper Sword: ' + str(app.data['copper sword'])
+                                on_press: app.send('copper sword')
+                            Button:
+                                text: 'Iron Sword: ' + str(app.data['iron sword'])
+                                on_press: app.send('iron sword')
+                            Button:
+                                text: 'Copper Arrow: ' + str(app.data['copper arrow'])
+                                on_press: app.send('copper arrow')
+                Screen:
+                    name: 'Gathering'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Gathering XP: ' + str(app.xps['gathering'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Wood Logs: ' + str(app.data['wood'])
+                                on_press: app.send('wood')
+                            Button:
+                                text: 'Sticks: ' + str(app.data['stick'])
+                                on_press: app.send('stick')
+                            Button:
+                                text: 'Wood Planks: ' + str(app.data['wood plank'])
+                                on_press: app.send('wood plank')
+                            Button:
+                                text: 'Carrots:  ' + str(app.data['carrot'])
+                                on_press: app.send('carrot')
+                Screen:
+                    name: 'Cooking'
+                    GridLayout:
+                        cols: 1
+                        Label:
+                            text: 'Cooking XP: ' + str(app.xps['cooking'])
+                        GridLayout:
+                            cols: 2
+                            Button:
+                                text: 'Cooked Carrots: ' + str(app.data['cooked carrot'])
+                                on_press: app.send('cooked carrot')
+            ThickProgressBar:
+                id: pb
+                value: 0
+                size_hint_y: None

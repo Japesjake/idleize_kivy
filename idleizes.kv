@@ -1,0 +1,48 @@
+<LoginScreen>:
+    orientation: 'vertical'
+    padding: 30
+    spacing: 15
+
+    Label:
+        text: "Welcome to Idleize"
+        font_size: '24sp'
+        size_hint_y: None
+        height: '40dp'
+
+    TextInput:
+        id: username_input
+        hint_text: "Username"
+        multiline: False
+        write_tab: False
+        size_hint_y: None
+        height: '40dp'
+
+    TextInput:
+        id: password_input
+        hint_text: "Password"
+        password: True
+        multiline: False
+        write_tab: False
+        size_hint_y: None
+        height: '40dp'
+
+    Label:
+        id: status_label
+        text: "Connecting..."
+        color: 1, 1, 0, 1
+        size_hint_y: None
+        height: '30dp'
+
+    BoxLayout:
+        orientation: 'horizontal'
+        spacing: 10
+        size_hint_y: None
+        height: '50dp'
+
+        Button:
+            text: "Login"
+            on_press: root.on_login()
+
+        Button:
+            text: "Register"
+            on_press: root.on_register()
