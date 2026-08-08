@@ -96,9 +96,15 @@ class LoginScreen(Screen):
         send_json({'type': 'new','username': self.username_input.text, 'password': self.password_input.text})
 
 class Tab(Screen):
-    def __init__(self, **kw):
+    def __init__(self,tab_type,tabs, **kw):
         super().__init__(**kw)
+        self.tab_type = tab_type
         self.add_widget(Label(text=self.name))
+        for category, items in tabs.items():
+            if category == tab_type:
+                for item in items:
+                    self.add_widget(Button(text=item))
+
 
 class Main(Screen):
     def __init__(self, **kw):
@@ -107,19 +113,17 @@ class Main(Screen):
         sidebar = BoxLayout(
             orientation='vertical',
             size_hint_x=0.25,
-            spacing=10,
-            padding=10
+            spacing=10
         )
-        tabs = ['Character', 'Combat', 'Mining']
-        buttons = [Button(text=tab, size_hint_y=None, height=50) for tab in tabs]
-        for button, tab in zip(buttons, tabs):
-            button.bind(on_press=lambda instance, t=tab: self.switch_tab(t))
+        tabs = {'Character':('dummy',), 'Combat':('dummy',), 'Mining':('Copper Ore',), 'Smelting':('dummy',), 'Crafting':('dummy',), 'Gathering':('dummy',), 'Cooking':('dummy',)}
+        buttons = [Button(text=tab) for tab in tabs.keys()]
+        for button in buttons:
+            button.bind(on_press=lambda instance, t=button.text: self.switch_tab(t))
             sidebar.add_widget(button)
-        sidebar.add_widget(Label())
 
         self.tab_manager = ScreenManager(transition=FadeTransition(duration=0.15))
         for tab in tabs:
-            self.tab_manager.add_widget(Tab(name=tab)) 
+            self.tab_manager.add_widget(Tab(tab_type=tab,tabs=tabs, name=tab)) 
 
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
@@ -140,6 +144,8 @@ class Idleize(App):
     def on_start(self):
         listening_thread = threading.Thread(target=handle_connection,args=(app,), daemon=True)
         listening_thread.start()
+        ### remove line under here to reactivate login credential query ###
+        send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
         if data_type == 'login' and data.get('message') == 'good':
