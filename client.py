@@ -99,11 +99,12 @@ class Tab(Screen):
     def __init__(self,tab_type,tabs, **kw):
         super().__init__(**kw)
         self.tab_type = tab_type
-        self.add_widget(Label(text=self.name))
-        for category, items in tabs.items():
-            if category == tab_type:
-                for item in items:
-                    self.add_widget(Button(text=item))
+        layout = BoxLayout(orientation='vertical')
+        layout.add_widget(Label(text=self.name))
+        items = tabs[tab_type]
+        for item in items:
+            layout.add_widget(Button(text=item))
+        self.add_widget(layout)
 
 
 class Main(Screen):
@@ -115,7 +116,10 @@ class Main(Screen):
             size_hint_x=0.25,
             spacing=10
         )
-        tabs = {'Character':('dummy',), 'Combat':('dummy',), 'Mining':('Copper Ore',), 'Smelting':('dummy',), 'Crafting':('dummy',), 'Gathering':('dummy',), 'Cooking':('dummy',)}
+
+        #### receive this data from server ###
+
+        tabs = {'Character':('dummy',), 'Combat':('dummy',), 'Mining':('Copper Ore','Iron Ore'), 'Smelting':('Copper Ingot',), 'Crafting':('dummy',), 'Gathering':('dummy',), 'Cooking':('dummy',)}
         buttons = [Button(text=tab) for tab in tabs.keys()]
         for button in buttons:
             button.bind(on_press=lambda instance, t=button.text: self.switch_tab(t))
@@ -124,6 +128,8 @@ class Main(Screen):
         self.tab_manager = ScreenManager(transition=FadeTransition(duration=0.15))
         for tab in tabs:
             self.tab_manager.add_widget(Tab(tab_type=tab,tabs=tabs, name=tab)) 
+
+        self.tab_manager.current = "Mining"
 
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
@@ -150,6 +156,8 @@ class Idleize(App):
         data_type = data.get('type')
         if data_type == 'login' and data.get('message') == 'good':
             self.sm.current = 'main'
+        if data_type == 'version':
+            version = data.get('version')
         print(data)
 
 app = Idleize()

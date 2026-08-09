@@ -1,5 +1,5 @@
 import socket, sqlite3, threading, json, bcrypt
-
+from server_data import items, categories
 host = '0.0.0.0'
 port = 1235
 
@@ -8,10 +8,18 @@ connections = {}
 sql_conn = sqlite3.connect('server.db')
 sql_conn.execute("PRAGMA journal_mode=WAL;")
 cursor = sql_conn.cursor()
+cursor.execute("PRAGMA foreign_keys = ON;")
 
 with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
+
+sql = "INSERT OR IGNORE INTO Category (name) VALUES (?)"
+cursor.executemany(sql, categories)
+
+sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category WHERE name = ?),?,?)"
+cursor.executemany(sql, items)
+sql_conn.commit()
 
 def send_json(sock, data):
     payload = json.dumps(data) + '\n'
@@ -38,6 +46,7 @@ class Server():
         sql_conn = sqlite3.connect('server.db')
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
         while True:
             data = recv_json(conn)
             if data is None:
