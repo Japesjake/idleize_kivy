@@ -91,7 +91,7 @@ class Server():
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((host, port))
         server.listen()
-        # print(f"[LISTENING] Server is listening on localhost: {port}")
+        print(f"[LISTENING] Server is listening on localhost: {port}")
 
         while True:
             conn, addr = server.accept()

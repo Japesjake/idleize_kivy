@@ -105,7 +105,10 @@ class ResourceTab(Screen):
         parent_layout.add_widget(Label(text=category_name.title(),size_hint_y=0.2))
         resources_layout = GridLayout(cols=2)
         for item in items:
-            resources_layout.add_widget(Button(text=item.title()))
+            btn = Button(text=item.title())
+            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'start idling','item':current_item}))
+            resources_layout.add_widget(btn)
+
         parent_layout.add_widget(resources_layout)
         self.add_widget(parent_layout)
 
