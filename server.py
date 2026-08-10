@@ -25,7 +25,7 @@ sql_conn.close()
 def send_json(sock, data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
-
+    print(data)
 def recv_json(sock):
     data = b""
     while True:
@@ -62,13 +62,10 @@ class Server():
                 if server_password is not None:
                     server_password = server_password[0]
                     if bcrypt.checkpw(password.encode('utf-8'), server_password):
-                        print('correct password')
                         send_json(conn, {'type': 'login', 'message': 'good'})
                     else:
-                        print('incorrect password')
                         send_json(conn, {'type': 'login', 'message': 'bad'})
                 else:
-                    print(f'username not found.')
                     send_json(conn, {'type': 'login', 'message': 'bad'})
             elif data_type == 'new':
                 username = data.get('username')
@@ -84,7 +81,6 @@ class Server():
                 if not client_version == server_version:
                     category_data = self.get_category_data()
                     send_json(conn, {'type':'update version','version': server_version, 'categories': category_data})
-                    print('version mismatch')
 
 
         conn.close()
@@ -93,7 +89,7 @@ class Server():
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((host, port))
         server.listen()
-        print(f"[LISTENING] Server is listening on localhost: {port}")
+        # print(f"[LISTENING] Server is listening on localhost: {port}")
 
         while True:
             conn, addr = server.accept()
@@ -104,13 +100,17 @@ class Server():
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
-        sql = "SELECT Category.name, json_group_array(Item.item_id) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name ORDER BY Category.sort_order ASC, Item.sort_order ASC;"
+        sql = "SELECT Category.name, json_group_array(Item.item_id ORDER BY Item.sort_order ASC) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name ORDER BY Category.sort_order ASC;"
         cursor.execute(sql)
         category_data = cursor.fetchall()
-        category_data = {key: json.loads(value) for key, value in category_data}
-        print(category_data)
+        category_data = self.convert_items_from_json(category_data)
         return category_data
-
+    def convert_items_from_json(self, rows):
+        dictionary = {}
+        for category, items_json in rows:
+            items_list = json.loads(items_json)
+            dictionary[category] = items_list
+        return dictionary
 class Connection():
     def __init__(self, conn, addr, thread):
         self.conn = conn

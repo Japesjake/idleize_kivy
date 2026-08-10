@@ -17,6 +17,7 @@ sock.connect((host, port))
 def send_json(data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
+    print(f'sent payload to client: {data}')
 def recv_json():
     data = b""
     while True:
@@ -119,14 +120,14 @@ class Main(Screen):
         #### receive this data from server ###
         # resource_categories = {'mining':('copper ore','iron ore'), 'smelting':('copper ingot',), 'crafting':('copper sword',), 'gathering':('wood',), 'cooking':('carrots',)}
         resource_categories = App.get_running_app().resource_categories
-        buttons = [Button(text=category.title()) for category in resource_categories.keys()]
+        buttons = [Button(text=category.title()) for category in resource_categories]
         for button in buttons:
             button.bind(on_press=lambda instance, t=button.text: self.switch_tab(t))
             sidebar.add_widget(button)
 
         self.tab_manager = ScreenManager(transition=FadeTransition(duration=0.15))
-        for category_name, items in resource_categories.items():
-            self.tab_manager.add_widget(ResourceTab(items=items, category_name=category_name, name=category_name)) 
+        for category_name in resource_categories:
+            self.tab_manager.add_widget(ResourceTab(items=resource_categories.get(category_name), category_name=category_name, name=category_name)) 
 
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
