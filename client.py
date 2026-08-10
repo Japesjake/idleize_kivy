@@ -7,6 +7,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.clock import Clock
+from kivy.uix.gridlayout import GridLayout
 
 host = 'localhost'
 port = 1235
@@ -17,7 +18,8 @@ sock.connect((host, port))
 def send_json(data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
-    print(f'sent payload to client: {data}')
+    print('sent: ')
+    print(data)
 def recv_json():
     data = b""
     while True:
@@ -99,11 +101,13 @@ class LoginScreen(Screen):
 class ResourceTab(Screen):
     def __init__(self,items,category_name,**kw):
         super().__init__(**kw)
-        layout = BoxLayout(orientation='vertical')
-        layout.add_widget(Label(text=category_name.title()))
+        parent_layout = BoxLayout(orientation='vertical')
+        parent_layout.add_widget(Label(text=category_name.title(),size_hint_y=0.2))
+        resources_layout = GridLayout(cols=2)
         for item in items:
-            layout.add_widget(Button(text=item.title()))
-        self.add_widget(layout)
+            resources_layout.add_widget(Button(text=item.title()))
+        parent_layout.add_widget(resources_layout)
+        self.add_widget(parent_layout)
 
 
 class Main(Screen):
@@ -168,7 +172,8 @@ class Idleize(App):
             # resource_categories = {key: set(value) for key, value in resource_categories.items()}
             self.resource_categories = resource_categories
             version = data.get('version')
-        print(f"data received from server: {data}")
+        print('received: ')
+        print(data)
     def set_default_tab(self):
         self.main.tab_manager.current = "mining"
 app = Idleize()

@@ -25,6 +25,7 @@ sql_conn.close()
 def send_json(sock, data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
+    print(f'sent:')
     print(data)
 def recv_json(sock):
     data = b""
@@ -52,7 +53,8 @@ class Server():
             data = recv_json(conn)
             if data is None:
                 break
-            print(f"[{addr}] says: {data}")
+            print('received: ')
+            print(data)
             data_type = data.get('type')
 
             if data_type == 'login':
