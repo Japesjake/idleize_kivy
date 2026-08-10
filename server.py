@@ -1,5 +1,5 @@
 import socket, sqlite3, threading, json, bcrypt
-from server_data import items, categories
+from server_data import items, categories, server_version
 host = '0.0.0.0'
 port = 1235
 
@@ -20,6 +20,7 @@ cursor.executemany(sql, categories)
 sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category WHERE name = ?),?,?)"
 cursor.executemany(sql, items)
 sql_conn.commit()
+sql_conn.close()
 
 def send_json(sock, data):
     payload = json.dumps(data) + '\n'
@@ -78,6 +79,13 @@ class Server():
                 except sqlite3.IntegrityError:
                     print('Username already exists.')
                 sql_conn.commit()
+            elif data_type == 'version':
+                client_version = data.get('version')
+                if not client_version == server_version:
+                    category_data = self.get_category_data()
+                    send_json(conn, {'type':'update version','version': server_version, 'categories': category_data})
+                    print('version mismatch')
+
 
         conn.close()
     def start_server(self):
@@ -91,6 +99,16 @@ class Server():
             conn, addr = server.accept()
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))
             thread.start()
+    def get_category_data(self):
+        sql_conn = sqlite3.connect('server.db')
+        sql_conn.execute("PRAGMA journal_mode=WAL;")
+        cursor = sql_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+        sql = "SELECT Category.name, json_group_array(Item.name) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name;"
+        cursor.execute(sql)
+        category_data = cursor.fetchall()
+        category_data = {key: json.loads(value) for key, value in category_data}
+        return category_data
 
 class Connection():
     def __init__(self, conn, addr, thread):

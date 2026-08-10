@@ -1,4 +1,4 @@
-import socket, json, threading
+import socket, json, threading, time
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import Screen, ScreenManager, FadeTransition
@@ -95,13 +95,11 @@ class LoginScreen(Screen):
     def create_new(self, instance):
         send_json({'type': 'new','username': self.username_input.text, 'password': self.password_input.text})
 
-class Tab(Screen):
-    def __init__(self,tab_type,tabs, **kw):
+class ResourceTab(Screen):
+    def __init__(self,items,category_name,**kw):
         super().__init__(**kw)
-        self.tab_type = tab_type
         layout = BoxLayout(orientation='vertical')
-        layout.add_widget(Label(text=self.name))
-        items = tabs[tab_type]
+        layout.add_widget(Label(text=category_name))
         for item in items:
             layout.add_widget(Button(text=item))
         self.add_widget(layout)
@@ -118,22 +116,23 @@ class Main(Screen):
         )
 
         #### receive this data from server ###
-
-        tabs = {'Character':('dummy',), 'Combat':('dummy',), 'Mining':('Copper Ore','Iron Ore'), 'Smelting':('Copper Ingot',), 'Crafting':('dummy',), 'Gathering':('dummy',), 'Cooking':('dummy',)}
-        buttons = [Button(text=tab) for tab in tabs.keys()]
+        # resource_categories = {'Mining':('Copper Ore','Iron Ore'), 'Smelting':('Copper Ingot',), 'Crafting':('Copper Sword',), 'Gathering':('Wood',), 'Cooking':('Carrots',)}
+        resource_categories = App.get_running_app().resource_categories
+        buttons = [Button(text=category) for category in resource_categories.keys()]
         for button in buttons:
             button.bind(on_press=lambda instance, t=button.text: self.switch_tab(t))
             sidebar.add_widget(button)
 
         self.tab_manager = ScreenManager(transition=FadeTransition(duration=0.15))
-        for tab in tabs:
-            self.tab_manager.add_widget(Tab(tab_type=tab,tabs=tabs, name=tab)) 
+        for category_name, items in resource_categories.items():
+            self.tab_manager.add_widget(ResourceTab(items=items, category_name=category_name, name=category_name)) 
 
         self.tab_manager.current = "Mining"
 
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
         self.add_widget(main_layout)
+        print('main screen loaded')
     def switch_tab(self, tab_name):
         self.tab_manager.current = tab_name
 
@@ -141,7 +140,6 @@ class Main(Screen):
 class Idleize(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        pass
     def build(self):
         self.sm = ScreenManager()
         self.sm.add_widget(LoginScreen(name='login'))
@@ -150,15 +148,22 @@ class Idleize(App):
     def on_start(self):
         listening_thread = threading.Thread(target=handle_connection,args=(app,), daemon=True)
         listening_thread.start()
+        with open("client_data.json", "r") as file:
+            data = json.load(file)
+            version = data.get('version')
         ### remove line under here to reactivate login credential query ###
+        send_json({'type':'version','version': version})
+        time.sleep(0.1)
         send_json({'type': 'login', 'username': '', 'password': ''})
+        print('app loaded')
     def on_server_message(self, data):
         data_type = data.get('type')
         if data_type == 'login' and data.get('message') == 'good':
             self.sm.current = 'main'
-        if data_type == 'version':
+        if data_type == 'update version':
+            self.resource_categories = data.get('categories')
             version = data.get('version')
-        print(data)
+        print(f"data received from server: {data}")
 
 app = Idleize()
 app.run()
