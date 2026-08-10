@@ -99,15 +99,16 @@ class ResourceTab(Screen):
     def __init__(self,items,category_name,**kw):
         super().__init__(**kw)
         layout = BoxLayout(orientation='vertical')
-        layout.add_widget(Label(text=category_name))
+        layout.add_widget(Label(text=category_name.title()))
         for item in items:
-            layout.add_widget(Button(text=item))
+            layout.add_widget(Button(text=item.title()))
         self.add_widget(layout)
 
 
 class Main(Screen):
     def __init__(self, **kw):
         super().__init__(**kw)
+    def create_ui(self):
         main_layout = BoxLayout(orientation='horizontal')
         sidebar = BoxLayout(
             orientation='vertical',
@@ -116,9 +117,9 @@ class Main(Screen):
         )
 
         #### receive this data from server ###
-        # resource_categories = {'Mining':('Copper Ore','Iron Ore'), 'Smelting':('Copper Ingot',), 'Crafting':('Copper Sword',), 'Gathering':('Wood',), 'Cooking':('Carrots',)}
+        # resource_categories = {'mining':('copper ore','iron ore'), 'smelting':('copper ingot',), 'crafting':('copper sword',), 'gathering':('wood',), 'cooking':('carrots',)}
         resource_categories = App.get_running_app().resource_categories
-        buttons = [Button(text=category) for category in resource_categories.keys()]
+        buttons = [Button(text=category.title()) for category in resource_categories.keys()]
         for button in buttons:
             button.bind(on_press=lambda instance, t=button.text: self.switch_tab(t))
             sidebar.add_widget(button)
@@ -127,14 +128,11 @@ class Main(Screen):
         for category_name, items in resource_categories.items():
             self.tab_manager.add_widget(ResourceTab(items=items, category_name=category_name, name=category_name)) 
 
-        self.tab_manager.current = "Mining"
-
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
         self.add_widget(main_layout)
-        print('main screen loaded')
     def switch_tab(self, tab_name):
-        self.tab_manager.current = tab_name
+        self.tab_manager.current = tab_name.lower()
 
           
 class Idleize(App):
@@ -143,7 +141,8 @@ class Idleize(App):
     def build(self):
         self.sm = ScreenManager()
         self.sm.add_widget(LoginScreen(name='login'))
-        self.sm.add_widget(Main(name='main'))
+        self.main = Main(name='main')
+        self.sm.add_widget(self.main)
         return self.sm
     def on_start(self):
         listening_thread = threading.Thread(target=handle_connection,args=(app,), daemon=True)
@@ -155,15 +154,21 @@ class Idleize(App):
         send_json({'type':'version','version': version})
         time.sleep(0.1)
         send_json({'type': 'login', 'username': '', 'password': ''})
-        print('app loaded')
     def on_server_message(self, data):
         data_type = data.get('type')
         if data_type == 'login' and data.get('message') == 'good':
+            #### populates ui after category_data is assigned ###
+            self.main.create_ui()
             self.sm.current = 'main'
+            #### sets default starting tab ###
+            Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
         if data_type == 'update version':
-            self.resource_categories = data.get('categories')
+            resource_categories = data.get('categories')
+            # resource_categories = {key: set(value) for key, value in resource_categories.items()}
+            self.resource_categories = resource_categories
             version = data.get('version')
         print(f"data received from server: {data}")
-
+    def set_default_tab(self):
+        self.main.tab_manager.current = "mining"
 app = Idleize()
 app.run()

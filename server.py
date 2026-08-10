@@ -14,10 +14,10 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-sql = "INSERT OR IGNORE INTO Category (name) VALUES (?)"
+sql = "INSERT OR IGNORE INTO Category (name, sort_order) VALUES (?, ?)"
 cursor.executemany(sql, categories)
 
-sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category WHERE name = ?),?,?)"
+sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category WHERE name = ?),?,?,?)"
 cursor.executemany(sql, items)
 sql_conn.commit()
 sql_conn.close()
@@ -104,10 +104,11 @@ class Server():
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
-        sql = "SELECT Category.name, json_group_array(Item.name) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name;"
+        sql = "SELECT Category.name, json_group_array(Item.item_id) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name ORDER BY Category.sort_order ASC, Item.sort_order ASC;"
         cursor.execute(sql)
         category_data = cursor.fetchall()
         category_data = {key: json.loads(value) for key, value in category_data}
+        print(category_data)
         return category_data
 
 class Connection():

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS Player (
     start_date TEXT DEFAULT (datetime('now'))
 );
 
-DROP TABLE Item;
+DROP TABLE IF EXISTS Item;
 
 CREATE TABLE IF NOT EXISTS Item (
     item_id TEXT PRIMARY KEY,
@@ -13,14 +13,16 @@ CREATE TABLE IF NOT EXISTS Item (
     category_id INTEGER,
     difficulty INTEGER,
     xp_reward INTEGER,
+    sort_order INTEGER,
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
-DROP TABLE Category;
+DROP TABLE IF EXISTS Category;
 
 CREATE TABLE IF NOT EXISTS Category (
     category_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) UNIQUE
+    name VARCHAR(255) UNIQUE,
+    sort_order INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS Inventory (
