@@ -1,9 +1,7 @@
-import socket, sqlite3, threading, json, bcrypt
+import socket, sqlite3, threading, json, bcrypt, time
 from server_data import items, categories, server_version
 host = '0.0.0.0'
 port = 1235
-
-connections = {}
 
 sql_conn = sqlite3.connect('server.db')
 sql_conn.execute("PRAGMA journal_mode=WAL;")
@@ -44,6 +42,24 @@ def recv_json(sock):
         return None
 
 class Server():
+    connections = []
+    def start_server(self):
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((host, port))
+        server.listen()
+        print(f"[LISTENING] Server is listening on localhost: {port}")
+        while True:
+            conn, addr = server.accept()
+            connection = Connection(conn, addr)
+            self.connections.append(connection)
+
+class Connection():
+    def __init__(self, conn, addr):
+        self.conn = conn
+        self.addr = addr
+        self.thread = threading.Thread(target=self.handle_client,args=(conn, addr))
+        self.thread.start()
     def handle_client(self, conn, addr):
         sql_conn = sqlite3.connect('server.db')
         sql_conn.execute("PRAGMA journal_mode=WAL;")
@@ -57,6 +73,7 @@ class Server():
             print(data)
             data_type = data.get('type')
 
+            ########## Data handling ########
             if data_type == 'login':
                 username = data.get('username')
                 password = data.get('password')
@@ -65,6 +82,8 @@ class Server():
                     server_password = server_password[0]
                     if bcrypt.checkpw(password.encode('utf-8'), server_password):
                         send_json(conn, {'type': 'login', 'message': 'good'})
+                        self.username = username
+                        self.password = password
                     else:
                         send_json(conn, {'type': 'login', 'message': 'bad'})
                 else:
@@ -83,20 +102,25 @@ class Server():
                 if not client_version == server_version:
                     category_data = self.get_category_data()
                     send_json(conn, {'type':'update version','version': server_version, 'categories': category_data})
+            elif data_type == 'toggle idling':
+                item = data.get('item')
+                matching_thread = None
+                for idle_thread in IdleThread.idle_threads:
+                    if idle_thread.username == self.username and idle_thread.password == self.password:
+                        matching_thread = idle_thread
+                        break
+                if matching_thread:
+                    matching_thread.idling = False
+                    IdleThread.idle_threads.remove(matching_thread)
+                    print("Conflict found: ending idle thread")
+                else:
+                    print("No matching idle thread found. starting one.")
+                    new_thread = IdleThread(conn, addr, self.username, self.password)
+                    IdleThread.idle_threads.append(new_thread)
+                    print("New thread started")
 
 
         conn.close()
-    def start_server(self):
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((host, port))
-        server.listen()
-        print(f"[LISTENING] Server is listening on localhost: {port}")
-
-        while True:
-            conn, addr = server.accept()
-            thread = threading.Thread(target=self.handle_client, args=(conn, addr))
-            thread.start()
     def get_category_data(self):
         sql_conn = sqlite3.connect('server.db')
         sql_conn.execute("PRAGMA journal_mode=WAL;")
@@ -106,6 +130,7 @@ class Server():
         cursor.execute(sql)
         category_data = cursor.fetchall()
         category_data = self.convert_items_from_json(category_data)
+        sql_conn.close()
         return category_data
     def convert_items_from_json(self, rows):
         dictionary = {}
@@ -113,12 +138,22 @@ class Server():
             items_list = json.loads(items_json)
             dictionary[category] = items_list
         return dictionary
-class Connection():
-    def __init__(self, conn, addr, thread):
+
+class IdleThread():
+    idle_threads = []
+    def __init__(self, conn, addr, username, password):
         self.conn = conn
         self.addr = addr
-        self.thread = thread
-
+        self.username = username
+        self.password = password
+        self.thread = threading.Thread(target=self.idle_process)
+        self.thread.start()
+    def idle_process(self):
+        self.idling = True
+        while self.idling:
+            time.sleep(1)
+            print('idling...')
+            
 
 server = Server()
 server.start_server()
