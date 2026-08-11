@@ -115,7 +115,7 @@ class Connection():
                     print("Conflict found: ending idle thread")
                 else:
                     print("No matching idle thread found. starting one.")
-                    new_thread = IdleThread(conn, addr, self.username, self.password)
+                    new_thread = IdleThread(conn, addr, self.username, self.password, item)
                     IdleThread.idle_threads.append(new_thread)
                     print("New thread started")
 
@@ -141,11 +141,12 @@ class Connection():
 
 class IdleThread():
     idle_threads = []
-    def __init__(self, conn, addr, username, password):
+    def __init__(self, conn, addr, username, password, item):
         self.conn = conn
         self.addr = addr
         self.username = username
         self.password = password
+        self.item = item
         self.thread = threading.Thread(target=self.idle_process)
         self.thread.start()
     def idle_process(self):
@@ -153,7 +154,14 @@ class IdleThread():
         while self.idling:
             time.sleep(1)
             print('idling...')
-            
-
+            self.increment()
+    def increment(self, amount_to_add=1):
+        sql_conn = sqlite3.connect('server.db')
+        sql_conn.execute("PRAGMA journal_mode=WAL;")
+        cursor = sql_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+        sql = "INSERT INTO Inventory (player_id, item_id, quantity) VALUES ((SELECT player_id from Player WHERE username = ?),?,?) ON CONFLICT (player_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity;"
+        cursor.execute(sql, (self.username, self.item, amount_to_add))
+        sql_conn.commit()
 server = Server()
 server.start_server()
