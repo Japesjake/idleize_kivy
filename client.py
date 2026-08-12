@@ -106,7 +106,7 @@ class ResourceTab(Screen):
         resources_layout = GridLayout(cols=2)
         for item in items:
             btn = Button(text=item.title())
-            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item}))
+            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item, 'session': App.get_running_app().session_token}))
             resources_layout.add_widget(btn)
 
         parent_layout.add_widget(resources_layout)
@@ -144,6 +144,7 @@ class Main(Screen):
 
           
 class Idleize(App):
+    session_token = None
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     def build(self):
@@ -165,6 +166,7 @@ class Idleize(App):
     def on_server_message(self, data):
         data_type = data.get('type')
         if data_type == 'login' and data.get('message') == 'good':
+            self.session_token = data['session']
             #### populates ui after category_data is assigned ###
             self.main.create_ui()
             self.sm.current = 'main'

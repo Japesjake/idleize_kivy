@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS Player (
     start_date TEXT DEFAULT (datetime('now'))
 );
 
-DROP TABLE IF EXISTS Item;
-
 CREATE TABLE IF NOT EXISTS Item (
     item_id TEXT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -16,8 +14,6 @@ CREATE TABLE IF NOT EXISTS Item (
     sort_order INTEGER,
     FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
-
-DROP TABLE IF EXISTS Category;
 
 CREATE TABLE IF NOT EXISTS Category (
     category_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,4 +28,12 @@ CREATE TABLE IF NOT EXISTS Inventory (
     PRIMARY KEY (player_id, item_id),
     FOREIGN KEY (player_id) REFERENCES Player(player_id),
     FOREIGN KEY (item_id) REFERENCES Item(item_id)
+);
+
+CREATE TABLE IF NOT EXISTS Session (
+    token_hash BLOB PRIMARY KEY,
+    player_id INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES Player(player_id) ON DELETE CASCADE
 );

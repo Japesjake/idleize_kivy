@@ -1,7 +1,9 @@
-import socket, sqlite3, threading, json, bcrypt, time
+import socket, sqlite3, threading, json, bcrypt, time, hashlib, secrets
 from server_data import items, categories, server_version
 host = '0.0.0.0'
 port = 1235
+
+SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 sql_conn = sqlite3.connect('server.db')
 sql_conn.execute("PRAGMA journal_mode=WAL;")
@@ -19,6 +21,40 @@ sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category 
 cursor.executemany(sql, items)
 sql_conn.commit()
 sql_conn.close()
+
+def hash_token(token: str) -> bytes:
+    return hashlib.sha256(token.encode("ascii")).digest()
+
+def create_session(cursor, player_id: int):
+    token = secrets.token_urlsafe(32)
+    now = int(time.time())
+    expires_at = now + SESSION_TTL_SECONDS
+
+    cursor.execute(
+        """
+        INSERT INTO Session (token_hash, player_id, created_at, expires_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (hash_token(token), player_id, now, expires_at),
+    )
+    return token, expires_at
+
+def get_authenticated_player(cursor, data):
+    token = data.get("session")
+
+    if not isinstance(token, str):
+        return None
+
+    row = cursor.execute(
+        """
+        SELECT player_id
+        FROM Session
+        WHERE token_hash = ? AND expires_at > ?
+        """,
+        (hash_token(token), int(time.time())),
+    ).fetchone()
+
+    return row[0] if row else None
 
 def send_json(sock, data):
     payload = json.dumps(data) + '\n'
@@ -74,20 +110,27 @@ class Connection():
             data_type = data.get('type')
 
             ########## Data handling ########
-            if data_type == 'login':
-                username = data.get('username')
-                password = data.get('password')
-                server_password = cursor.execute("SELECT password FROM Player WHERE username = ?",(username,)).fetchone()
-                if server_password is not None:
-                    server_password = server_password[0]
-                    if bcrypt.checkpw(password.encode('utf-8'), server_password):
-                        send_json(conn, {'type': 'login', 'message': 'good'})
-                        self.username = username
-                        self.password = password
-                    else:
-                        send_json(conn, {'type': 'login', 'message': 'bad'})
+            if data_type == "login":
+                username = data.get("username")
+                password = data.get("password")
+
+                row = cursor.execute(
+                    "SELECT player_id, password FROM Player WHERE username = ?",
+                    (username,),
+                ).fetchone()
+
+                if row and bcrypt.checkpw(password.encode("utf-8"), row[1]):
+                    token, expires_at = create_session(cursor, row[0])
+                    sql_conn.commit()
+
+                    send_json(conn, {
+                        "type": "login",
+                        "message": "good",
+                        "session": token,
+                        "expires_at": expires_at,
+                    })
                 else:
-                    send_json(conn, {'type': 'login', 'message': 'bad'})
+                    send_json(conn, {"type": "login", "message": "bad"})
             elif data_type == 'new':
                 username = data.get('username')
                 password = data.get('password')
@@ -102,22 +145,33 @@ class Connection():
                 if not client_version == server_version:
                     category_data = self.get_category_data()
                     send_json(conn, {'type':'update version','version': server_version, 'categories': category_data})
-            elif data_type == 'toggle idling':
-                item = data.get('item')
+            elif data_type == "toggle idling":
+                player_id = get_authenticated_player(cursor, data)
+
+                if player_id is None:
+                    send_json(conn, {
+                        "type": "error",
+                        "message": "authentication required",
+                    })
+                    continue
+
+                item_id = data.get("item")
+
                 matching_thread = None
                 for idle_thread in IdleThread.idle_threads:
-                    if idle_thread.username == self.username and idle_thread.password == self.password:
+                    if idle_thread.player_id == player_id:
                         matching_thread = idle_thread
                         break
+
                 if matching_thread:
                     matching_thread.idling = False
                     IdleThread.idle_threads.remove(matching_thread)
-                    print("Conflict found: ending idle thread")
+                    print("Existing idle thread stopped.")
                 else:
-                    print("No matching idle thread found. starting one.")
-                    new_thread = IdleThread(conn, addr, self.username, self.password, item)
+                    new_thread = IdleThread(conn, addr, player_id, item_id)
                     IdleThread.idle_threads.append(new_thread)
-                    print("New thread started")
+                    print("New idle thread started.")
+
 
 
         conn.close()
@@ -141,12 +195,12 @@ class Connection():
 
 class IdleThread():
     idle_threads = []
-    def __init__(self, conn, addr, username, password, item):
+    def __init__(self, conn, addr, player_id, item_id):
         self.conn = conn
         self.addr = addr
-        self.username = username
-        self.password = password
-        self.item = item
+        self.player_id = player_id
+        self.item = item_id
+        self.idling = True
         self.thread = threading.Thread(target=self.idle_process)
         self.thread.start()
     def idle_process(self):
@@ -160,8 +214,15 @@ class IdleThread():
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
-        sql = "INSERT INTO Inventory (player_id, item_id, quantity) VALUES ((SELECT player_id from Player WHERE username = ?),?,?) ON CONFLICT (player_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity;"
-        cursor.execute(sql, (self.username, self.item, amount_to_add))
+        cursor.execute(
+            """
+            INSERT INTO Inventory (player_id, item_id, quantity)
+            VALUES (?, ?, ?)
+            ON CONFLICT(player_id, item_id)
+            DO UPDATE SET quantity = quantity + excluded.quantity
+            """,
+            (self.player_id, self.item, amount_to_add),
+        )
         sql_conn.commit()
 server = Server()
 server.start_server()
