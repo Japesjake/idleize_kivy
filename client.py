@@ -127,8 +127,6 @@ class Main(Screen):
             spacing=10
         )
 
-        #### receive this data from server ###
-        # resource_categories = {'mining':('copper ore','iron ore'), 'smelting':('copper ingot',), 'crafting':('copper sword',), 'gathering':('wood',), 'cooking':('carrots',)}
         resource_categories = App.get_running_app().resource_categories
         buttons = [Button(text=category.title()) for category in resource_categories]
         for button in buttons:
@@ -148,6 +146,7 @@ class Main(Screen):
           
 class Idleize(App):
     session_token = None
+    resource_categories = None
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     def build(self):
@@ -168,20 +167,22 @@ class Idleize(App):
         send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
-        if data_type == 'login' and data.get('message') == 'good':
+        message = data.get('message')
+        if data_type == 'login' and message == 'good':
             self.session_token = data['session']
             #### populates ui after category_data is assigned ###
             self.main.create_ui()
             self.sm.current = 'main'
             #### sets default starting tab ###
             Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
-        elif data_type == 'update version':
+        elif data_type == 'version' and message == 'version mismatch':
             self.resource_categories = data.get('categories')
             self.version = data.get('version')
             with open("client_data.json", "w") as f:
                 json.dump({'version': self.version, 'categories':self.resource_categories}, f)
+            
         elif data_type == 'version':
-            if data.get('message') == 'good':
+            if message == 'good':
                 with open("client_data.json", 'r') as f:
                     self.resource_categories = json.load(f).get('categories')
         print('received: ')
