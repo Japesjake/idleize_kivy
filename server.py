@@ -121,8 +121,6 @@ class Connection():
 
     def handle_message(self, cursor, sql_conn, conn, addr, data):
         data_type = data.get('type')
-
-        ########## Data handling ########
         if data_type == "login":
             username = data.get("username")
             password = data.get("password")
@@ -136,11 +134,17 @@ class Connection():
                 token, expires_at = create_session(cursor, row[0])
                 sql_conn.commit()
 
+                inventory_rows = cursor.execute(
+                    "SELECT item_id, quantity FROM Inventory WHERE player_id = ?",
+                    (row[0],)
+                ).fetchall()
+
                 send_json(conn, {
                     "type": "login",
                     "message": "good",
                     "session": token,
                     "expires_at": expires_at,
+                    "inventory": dict(inventory_rows)
                 })
             else:
                 send_json(conn, {"type": "login", "message": "bad"})
@@ -150,8 +154,8 @@ class Connection():
             hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             try:
                 cursor.execute("INSERT INTO Player (username, password) VALUES (?,?)",(username, hashed_password))
-            except sqlite3.IntegrityError:
-                print('Username already exists.')
+            except sqlite3.IntegrityError as e:
+                print(e)
             sql_conn.commit()
         elif data_type == 'version check':
             client_version = data.get('version')
@@ -161,6 +165,7 @@ class Connection():
             else:
                 print('versions match. No update needed.')
                 send_json(conn, {'type': 'version', 'message': 'good'})
+
 
         elif data_type == "toggle idling":
             player_id = get_authenticated_player(cursor, data)
@@ -238,5 +243,13 @@ class IdleThread():
             (self.player_id, self.item, amount_to_add),
         )
         sql_conn.commit()
+        new_quantity = cursor.execute(
+            "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
+            (self.player_id, self.item),
+        ).fetchone()[0]
+        try:
+            send_json(self.conn, {'type':'inventory update', 'item': self.item, 'quantity':new_quantity})
+        except OSError:
+            pass
 server = Server()
 server.start_server()

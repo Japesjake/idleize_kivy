@@ -8,6 +8,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
+from kivy.properties import DictProperty
 
 host = 'localhost'
 port = 1235
@@ -107,11 +108,12 @@ class ResourceTab(Screen):
         parent_layout = BoxLayout(orientation='vertical')
         parent_layout.add_widget(Label(text=category_name.title(),size_hint_y=0.2))
         resources_layout = GridLayout(cols=2)
+        self.item_buttons = {}
         for item in items:
-            btn = Button(text=item.title())
-            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item, 'session': App.get_running_app().session_token}))
+            btn = Button(text=f"{item.title()}: {App.get_running_app().inventory.get(item)}")
+            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item}))
             resources_layout.add_widget(btn)
-
+            self.item_buttons[item] = btn
         parent_layout.add_widget(resources_layout)
         self.add_widget(parent_layout)
 
@@ -140,6 +142,12 @@ class Main(Screen):
         main_layout.add_widget(sidebar)
         main_layout.add_widget(self.tab_manager)
         self.add_widget(main_layout)
+
+        App.get_running_app().bind(inventory=self.on_inventory_change)
+    def on_inventory_change(self, app, inventory):
+        for tab in self.tab_manager.screens:
+            for item, btn in tab.item_buttons.items():
+                btn.text = f"{item.title()}: {inventory.get(item,0)}"
     def switch_tab(self, tab_name):
         self.tab_manager.current = tab_name.lower()
 
@@ -147,6 +155,7 @@ class Main(Screen):
 class Idleize(App):
     session_token = None
     resource_categories = None
+    inventory = DictProperty({})
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     def build(self):
@@ -170,6 +179,7 @@ class Idleize(App):
         message = data.get('message')
         if data_type == 'login' and message == 'good':
             self.session_token = data['session']
+            self.inventory = data.get('inventory', {})
             #### populates ui after category_data is assigned ###
             self.main.create_ui()
             self.sm.current = 'main'
@@ -179,12 +189,20 @@ class Idleize(App):
             self.resource_categories = data.get('categories')
             self.version = data.get('version')
             with open("client_data.json", "w") as f:
-                json.dump({'version': self.version, 'categories':self.resource_categories}, f)
-            
+                json.dump({'version': self.version, 'categories':self.resource_categories, 'inventory':self.inventory}, f)
         elif data_type == 'version':
             if message == 'good':
                 with open("client_data.json", 'r') as f:
                     self.resource_categories = json.load(f).get('categories')
+        elif data_type == 'inventory update':
+            self.inventory[data.get('item')] = data.get('quantity')
+        elif data_type == 'sync':
+            pass
+
+
+
+
+
         print('received: ')
         print(data)
     def set_default_tab(self):
