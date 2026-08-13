@@ -5,7 +5,7 @@ port = 1235
 
 SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
-sql_conn = sqlite3.connect('server.db')
+sql_conn = sqlite3.connect('data.db')
 sql_conn.execute("PRAGMA journal_mode=WAL;")
 cursor = sql_conn.cursor()
 cursor.execute("PRAGMA foreign_keys = ON;")
@@ -97,7 +97,7 @@ class Connection():
         self.thread = threading.Thread(target=self.handle_client,args=(conn, addr))
         self.thread.start()
     def handle_client(self, conn, addr):
-        sql_conn = sqlite3.connect('server.db')
+        sql_conn = sqlite3.connect('data.db')
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
@@ -118,6 +118,7 @@ class Connection():
                     break
 
         conn.close()
+        sql_conn.close()
 
     def handle_message(self, cursor, sql_conn, conn, addr, data):
         data_type = data.get('type')
@@ -133,6 +134,11 @@ class Connection():
             if row and bcrypt.checkpw(password.encode("utf-8"), row[1]):
                 token, expires_at = create_session(cursor, row[0])
                 sql_conn.commit()
+
+                for idle_thread in IdleThread.idle_threads:
+                    if idle_thread.player_id == row[0]:
+                        idle_thread.conn = conn
+                        break
 
                 inventory_rows = cursor.execute(
                     "SELECT item_id, quantity FROM Inventory WHERE player_id = ?",
@@ -195,7 +201,7 @@ class Connection():
                 print("New idle thread started.")
 
     def get_category_data(self):
-        sql_conn = sqlite3.connect('server.db')
+        sql_conn = sqlite3.connect('data.db')
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
@@ -229,24 +235,27 @@ class IdleThread():
             print('idling...')
             self.increment()
     def increment(self, amount_to_add=1):
-        sql_conn = sqlite3.connect('server.db')
-        sql_conn.execute("PRAGMA journal_mode=WAL;")
-        cursor = sql_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys = ON;")
-        cursor.execute(
-            """
-            INSERT INTO Inventory (player_id, item_id, quantity)
-            VALUES (?, ?, ?)
-            ON CONFLICT(player_id, item_id)
-            DO UPDATE SET quantity = quantity + excluded.quantity
-            """,
-            (self.player_id, self.item, amount_to_add),
-        )
-        sql_conn.commit()
-        new_quantity = cursor.execute(
-            "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
-            (self.player_id, self.item),
-        ).fetchone()[0]
+        try:
+            sql_conn = sqlite3.connect('data.db')
+            sql_conn.execute("PRAGMA journal_mode=WAL;")
+            cursor = sql_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys = ON;")
+            cursor.execute(
+                """
+                INSERT INTO Inventory (player_id, item_id, quantity)
+                VALUES (?, ?, ?)
+                ON CONFLICT(player_id, item_id)
+                DO UPDATE SET quantity = quantity + excluded.quantity
+                """,
+                (self.player_id, self.item, amount_to_add),
+            )
+            sql_conn.commit()
+            new_quantity = cursor.execute(
+                "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
+                (self.player_id, self.item),
+            ).fetchone()[0]
+        finally:
+            sql_conn.close()
         try:
             send_json(self.conn, {'type':'inventory update', 'item': self.item, 'quantity':new_quantity})
         except OSError:

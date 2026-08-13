@@ -172,8 +172,8 @@ class Idleize(App):
             version = data.get('version')
         ### remove line under here to reactivate login credential query ###
         send_json({'type':'version check','version': version})
-        time.sleep(0.1)
-        send_json({'type': 'login', 'username': '', 'password': ''})
+        # time.sleep(0.1)
+        # send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
         message = data.get('message')
@@ -196,13 +196,6 @@ class Idleize(App):
                     self.resource_categories = json.load(f).get('categories')
         elif data_type == 'inventory update':
             self.inventory[data.get('item')] = data.get('quantity')
-        elif data_type == 'sync':
-            pass
-
-
-
-
-
         print('received: ')
         print(data)
     def set_default_tab(self):
