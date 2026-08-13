@@ -16,6 +16,9 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect((host, port))
 
 def send_json(data):
+    app = App.get_running_app()
+    if getattr(app, 'session_token',None):
+        data = {**data, 'session': app.session_token}
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
     print('sent: ')
@@ -160,7 +163,7 @@ class Idleize(App):
             data = json.load(file)
             version = data.get('version')
         ### remove line under here to reactivate login credential query ###
-        send_json({'type':'version','version': version})
+        send_json({'type':'version check','version': version})
         time.sleep(0.1)
         send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
@@ -172,11 +175,15 @@ class Idleize(App):
             self.sm.current = 'main'
             #### sets default starting tab ###
             Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
-        if data_type == 'update version':
-            resource_categories = data.get('categories')
-            # resource_categories = {key: set(value) for key, value in resource_categories.items()}
-            self.resource_categories = resource_categories
-            version = data.get('version')
+        elif data_type == 'update version':
+            self.resource_categories = data.get('categories')
+            self.version = data.get('version')
+            with open("client_data.json", "w") as f:
+                json.dump({'version': self.version, 'categories':self.resource_categories}, f)
+        elif data_type == 'version':
+            if data.get('message') == 'good':
+                with open("client_data.json", 'r') as f:
+                    self.resource_categories = json.load(f).get('categories')
         print('received: ')
         print(data)
     def set_default_tab(self):

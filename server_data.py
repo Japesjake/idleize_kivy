@@ -11,6 +11,7 @@ items = [
     ('iron ingot', 'Iron Ingot','smelting',1,1,2),
 
     ('carrot','Carrot','gathering', 1, 1,1),
+    ('wood','Wood', 'gathering', 1, 1, 1),
     
     ('copper sword','Copper Sword','crafting',1,1,1),
 ]
@@ -19,5 +20,5 @@ categories = [
     ('mining',1),
     ('smelting',2),
     ('gathering',3),
-    ('crafting',4)
+    ('crafting',4),
 ]

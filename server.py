@@ -133,13 +133,13 @@ class Connection():
             ).fetchone()
 
             if row and bcrypt.checkpw(password.encode("utf-8"), row[1]):
-                token, expires_at = create_session(cursor, row[0])
+                self.token, expires_at = create_session(cursor, row[0])
                 sql_conn.commit()
 
                 send_json(conn, {
                     "type": "login",
                     "message": "good",
-                    "session": token,
+                    "session": self.token,
                     "expires_at": expires_at,
                 })
             else:
@@ -153,37 +153,42 @@ class Connection():
             except sqlite3.IntegrityError:
                 print('Username already exists.')
             sql_conn.commit()
-        elif data_type == 'version':
+        elif data_type == 'version check':
             client_version = data.get('version')
             if not client_version == server_version:
                 category_data = self.get_category_data()
                 send_json(conn, {'type':'update version','version': server_version, 'categories': category_data})
-        elif data_type == "toggle idling":
-            player_id = get_authenticated_player(cursor, data)
-
-            if player_id is None:
-                send_json(conn, {
-                    "type": "error",
-                    "message": "authentication required",
-                })
-                return
-
-            item_id = data.get("item")
-
-            matching_thread = None
-            for idle_thread in IdleThread.idle_threads:
-                if idle_thread.player_id == player_id:
-                    matching_thread = idle_thread
-                    break
-
-            if matching_thread:
-                matching_thread.idling = False
-                IdleThread.idle_threads.remove(matching_thread)
-                print("Existing idle thread stopped.")
             else:
-                new_thread = IdleThread(conn, addr, player_id, item_id)
-                IdleThread.idle_threads.append(new_thread)
-                print("New idle thread started.")
+                print('versions match. No update needed.')
+                send_json(conn, {'type': 'version', 'message': 'good'})
+
+        elif data_type == "toggle idling":
+            if data.get('session') == self.token:
+                player_id = get_authenticated_player(cursor, data)
+
+                if player_id is None:
+                    send_json(conn, {
+                        "type": "error",
+                        "message": "authentication required",
+                    })
+                    return
+
+                item_id = data.get("item")
+
+                matching_thread = None
+                for idle_thread in IdleThread.idle_threads:
+                    if idle_thread.player_id == player_id:
+                        matching_thread = idle_thread
+                        break
+
+                if matching_thread:
+                    matching_thread.idling = False
+                    IdleThread.idle_threads.remove(matching_thread)
+                    print("Existing idle thread stopped.")
+                else:
+                    new_thread = IdleThread(conn, addr, player_id, item_id)
+                    IdleThread.idle_threads.append(new_thread)
+                    print("New idle thread started.")
 
     def get_category_data(self):
         sql_conn = sqlite3.connect('server.db')
