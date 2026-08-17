@@ -9,6 +9,7 @@ from kivy.uix.anchorlayout import AnchorLayout
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
 from kivy.properties import DictProperty
+from kivy.uix.popup import Popup
 
 host = 'localhost'
 port = 1235
@@ -40,6 +41,8 @@ def recv_json():
 def handle_connection(app_instance):
     while True:
         data = recv_json()
+        if data is None:
+            break
         Clock.schedule_once(lambda dt: app_instance.on_server_message(data))
     sock.close()
 class LoginScreen(Screen):
@@ -172,8 +175,8 @@ class Idleize(App):
             version = data.get('version')
         send_json({'type':'version check','version': version})
         ### remove lines under here to deactivate automatic login ###
-        time.sleep(0.1)
-        send_json({'type': 'login', 'username': '', 'password': ''})
+        # time.sleep(0.1)
+        # send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
         message = data.get('message')
@@ -185,6 +188,13 @@ class Idleize(App):
             self.sm.current = 'main'
             #### sets default starting tab ###
             Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
+        elif data_type == 'new':
+            if message == 'username occupied':
+                print(f'username already taken')
+                self.show_popup('Registration Failed','That username is already taken.\nClick outside to close.')
+            elif message == 'registration successful':
+                print(f'registration successful')
+                self.show_popup('Registration Successful','click outside to close.')
         elif data_type == 'version' and message == 'version mismatch':
             self.resource_categories = data.get('categories')
             self.version = data.get('version')
@@ -200,5 +210,8 @@ class Idleize(App):
         print(data)
     def set_default_tab(self):
         self.main.tab_manager.current = "mining"
+    def show_popup(self,title,message):
+        popup = Popup(title=title,content=Label(text=message),size_hint=(0.6,0.2))
+        popup.open()
 app = Idleize()
 app.run()

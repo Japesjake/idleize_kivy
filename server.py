@@ -162,6 +162,9 @@ class Connection():
                 cursor.execute("INSERT INTO Player (username, password) VALUES (?,?)",(username, hashed_password))
             except sqlite3.IntegrityError as e:
                 print(e)
+                send_json(conn, {"type":"new","message":"username occupied"})
+            else:
+                send_json(conn, {"type":"new","message":"registration successful"})
             sql_conn.commit()
         elif data_type == 'version check':
             client_version = data.get('version')
