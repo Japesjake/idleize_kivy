@@ -110,7 +110,7 @@ class ResourceTab(Screen):
         resources_layout = GridLayout(cols=2)
         self.item_buttons = {}
         for item in items:
-            btn = Button(text=f"{item.title()}: {App.get_running_app().inventory.get(item)}")
+            btn = Button(text=f"{item.title()}: {App.get_running_app().inventory.get(item, 0)}")
             btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item}))
             resources_layout.add_widget(btn)
             self.item_buttons[item] = btn
@@ -170,10 +170,10 @@ class Idleize(App):
         with open("client_data.json", "r") as file:
             data = json.load(file)
             version = data.get('version')
-        ### remove line under here to reactivate login credential query ###
         send_json({'type':'version check','version': version})
-        # time.sleep(0.1)
-        # send_json({'type': 'login', 'username': '', 'password': ''})
+        ### remove lines under here to deactivate automatic login ###
+        time.sleep(0.1)
+        send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
         message = data.get('message')
