@@ -46,3 +46,12 @@ CREATE TABLE IF NOT EXISTS PlayerExperience (
     FOREIGN KEY (player_id) REFERENCES Player(player_id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS Recipe (
+    item_id TEXT NOT NULL,
+    required_item_id TEXT NOT NULL,
+    required_quantity INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (item_id, required_item_id),
+    FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE,
+    FOREIGN KEY (required_item_id) REFERENCES Item(item_id) ON DELETE CASCADE
+);

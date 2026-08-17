@@ -120,15 +120,25 @@ class ResourceTab(Screen):
         self.item_buttons = {}
         self.item_difficulty = {}
         self.item_xp_reward = {}
-        for item, difficulty, xp_reward in items:
+        self.item_recipe = {}
+        for item, difficulty, xp_reward, recipe in items:
             self.item_difficulty[item] = difficulty
             self.item_xp_reward[item] = xp_reward
+            self.item_recipe[item] = recipe
             btn = Button(text=self.button_text(item))
-            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item}))
+            btn.color = (1, 1, 1, 1) if self.has_required_materials(item) else (1, 0, 0, 1)
+            btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling', 'item': current_item}))
             resources_layout.add_widget(btn)
             self.item_buttons[item] = btn
         parent_layout.add_widget(resources_layout)
         self.add_widget(parent_layout)
+
+    def has_required_materials(self, item):
+        inventory = App.get_running_app().inventory
+        for required_item_id, required_quantity in self.item_recipe.get(item, []):
+            if inventory.get(required_item_id, 0) < required_quantity:
+                return False
+        return True
 
     def button_text(self, item):
         app = App.get_running_app()
@@ -171,12 +181,19 @@ class Main(Screen):
         for tab in self.tab_manager.screens:
             for item, btn in tab.item_buttons.items():
                 btn.text = tab.button_text(item)
+                btn.color = (1, 1, 1, 1) if tab.has_required_materials(item) else (1, 0, 0, 1)
     def on_experience_change(self, app, experience):
         for tab in self.tab_manager.screens:
             if tab.category_name in experience:
                 tab.header_label.text = f"{tab.category_name.title()} \n xp: {experience[tab.category_name]}"
             for item, btn in tab.item_buttons.items():
                 btn.text = tab.button_text(item)
+                btn.color = (1, 1, 1, 1) if tab.has_required_materials(item) else (1, 0, 0, 1)
+    def mark_out_of_materials(self, item):
+        for tab in self.tab_manager.screens:
+            if item in tab.item_buttons:
+                tab.item_buttons[item].color = (1, 0, 0, 1)
+                break
     def switch_tab(self, tab_name):
         self.tab_manager.current = tab_name.lower()
 
@@ -242,6 +259,10 @@ class Idleize(App):
         elif data_type == 'update':
             self.inventory[data.get('item')] = data.get('quantity')
             self.experience[data.get('category')] = data.get('new_xp')
+            for consumed_item, remaining in data.get('consumed', {}).items():
+                self.inventory[consumed_item] = remaining
+        elif data_type == 'out of materials':
+            self.main.mark_out_of_materials(data.get('item'))
         print('received: ')
         print(data)
     def set_default_tab(self):

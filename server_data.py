@@ -24,3 +24,11 @@ categories = [
     ('gathering',3),
     ('crafting',4)
 ]
+
+### item, required_item, required_quantity
+recipes = [
+    ('copper ingot', 'copper ore', 2),
+    ('iron ingot', 'iron ore', 2),
+    ('copper sword', 'copper ingot', 3),
+    ('iron sword', 'iron ingot', 3),
+]

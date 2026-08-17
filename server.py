@@ -1,5 +1,5 @@
 import socket, sqlite3, threading, json, bcrypt, time, hashlib, secrets
-from server_data import items, categories, server_version
+from server_data import items, categories, server_version, recipes
 from collections import defaultdict
 host = '0.0.0.0'
 port = 1235
@@ -35,6 +35,14 @@ ON CONFLICT(item_id) DO UPDATE SET
     sort_order = excluded.sort_order
 """
 cursor.executemany(sql, items)
+
+sql = """
+INSERT INTO Recipe (item_id, required_item_id, required_quantity)
+VALUES (?, ?, ?)
+ON CONFLICT(item_id, required_item_id) DO UPDATE SET required_quantity = excluded.required_quantity
+"""
+cursor.executemany(sql, recipes)
+
 sql_conn.commit()
 sql_conn.close()
 
@@ -234,6 +242,11 @@ class Connection():
                 (player_id, category_id),
             ).fetchone()
             current_xp = xp_row[0] if xp_row else 0
+
+            recipe = cursor.execute(
+                "SELECT required_item_id, required_quantity FROM Recipe WHERE item_id = ?",
+                (item_id,),
+            ).fetchall()
             ########
 
             matching_thread = None
@@ -246,8 +259,9 @@ class Connection():
                 matching_thread.idling = False
                 IdleThread.idle_threads.remove(matching_thread)
                 print("Existing idle thread stopped.")
-            else:
-                new_thread = IdleThread(conn, addr, player_id, item_id, category_id, xp_reward, difficulty, current_xp)
+
+            if not matching_thread or matching_thread.item != item_id:
+                new_thread = IdleThread(conn, addr, player_id, item_id, category_id, xp_reward, difficulty, current_xp, recipe)
                 IdleThread.idle_threads.append(new_thread)
                 print(f"New idle thread started. Item_id = {item_id}")
 
@@ -260,6 +274,17 @@ class Connection():
         cursor.execute(sql)
         category_data = cursor.fetchall()
         category_data = self.convert_items_from_json(category_data)
+
+        recipes_by_item = {}
+        for item_id, required_item_id, required_quantity in cursor.execute(
+            "SELECT item_id, required_item_id, required_quantity FROM Recipe"
+        ).fetchall():
+            recipes_by_item.setdefault(item_id, []).append([required_item_id, required_quantity])
+
+        for item_list in category_data.values():
+            for item_entry in item_list:
+                item_entry.append(recipes_by_item.get(item_entry[0], []))
+
         sql_conn.close()
         return category_data
     def convert_items_from_json(self, rows):
@@ -271,7 +296,7 @@ class Connection():
 
 class IdleThread():
     idle_threads = []
-    def __init__(self, conn, addr, player_id, item_id, category_id, xp_reward, difficulty, xp):
+    def __init__(self, conn, addr, player_id, item_id, category_id, xp_reward, difficulty, xp, recipe):
         self.conn = conn
         self.addr = addr
         self.player_id = player_id
@@ -280,6 +305,7 @@ class IdleThread():
         self.xp_reward = xp_reward
         self.difficulty = difficulty
         self.xp = xp
+        self.recipe = recipe
         self.idling = True
         self.thread = threading.Thread(target=self.idle_process)
         self.thread.start()
@@ -296,6 +322,50 @@ class IdleThread():
             sql_conn.execute("PRAGMA journal_mode=WAL;")
             cursor = sql_conn.cursor()
             cursor.execute("PRAGMA foreign_keys = ON;")
+
+            if self.recipe:
+                missing = None
+                for required_item_id, required_quantity in self.recipe:
+                    row = cursor.execute(
+                        "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
+                        (self.player_id, required_item_id),
+                    ).fetchone()
+                    have = row[0] if row else 0
+                    if have < required_quantity:
+                        missing = (required_item_id, required_quantity, have)
+                        break
+
+                if missing:
+                    required_item_id, required_quantity, have = missing
+                    self.idling = False
+                    if self in IdleThread.idle_threads:
+                        IdleThread.idle_threads.remove(self)
+                    try:
+                        send_json(self.conn, {
+                            'type': 'out of materials',
+                            'item': self.item,
+                            'required_item': required_item_id,
+                            'required_quantity': required_quantity,
+                            'have': have,
+                        })
+                    except OSError:
+                        pass
+                    return
+
+                consumed = {}
+                for required_item_id, required_quantity in self.recipe:
+                    cursor.execute(
+                        "UPDATE Inventory SET quantity = quantity - ? WHERE player_id = ? AND item_id = ?",
+                        (required_quantity, self.player_id, required_item_id),
+                    )
+                    remaining = cursor.execute(
+                        "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
+                        (self.player_id, required_item_id),
+                    ).fetchone()[0]
+                    consumed[required_item_id] = remaining
+            else:
+                consumed = {}
+
             cursor.execute(
                 """
                 INSERT INTO Inventory (player_id, item_id, quantity)
@@ -333,7 +403,7 @@ class IdleThread():
         finally:
             sql_conn.close()
         try:
-            send_json(self.conn, {'type':'update', 'item': self.item, 'quantity':new_quantity, 'category':category_name, 'new_xp': new_xp})
+            send_json(self.conn, {'type':'update', 'item': self.item, 'quantity':new_quantity, 'category':category_name, 'new_xp': new_xp, 'consumed': consumed})
         except OSError:
             pass
 server = Server()
