@@ -1,9 +1,12 @@
 import socket, sqlite3, threading, json, bcrypt, time, hashlib, secrets
 from server_data import items, categories, server_version
+from collections import defaultdict
 host = '0.0.0.0'
 port = 1235
 
 SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
+
+failed_login_attempts = defaultdict(list)
 
 sql_conn = sqlite3.connect('data.db')
 sql_conn.execute("PRAGMA journal_mode=WAL;")
@@ -106,7 +109,10 @@ class Connection():
             if data is None:
                 break
             print('received: ')
-            print(data)
+            if 'password' in data:
+                print({**data, 'password': '[redacted]'})
+            else:
+                print(data)
             try:
                 self.handle_message(cursor, sql_conn, conn, addr, data)
             except Exception as e:
@@ -126,12 +132,22 @@ class Connection():
             username = data.get("username")
             password = data.get("password")
 
+            ### login attempts checker ###
+            now = time.time()
+            attempts = failed_login_attempts[username]
+            attempts[:] = [t for t in attempts if now - t < 60]
+            if len(attempts) >= 5:
+                send_json(conn,{"type":"login","message":"lockout"})
+                return
+            ###############################
+
             row = cursor.execute(
                 "SELECT player_id, password FROM Player WHERE username = ?",
                 (username,),
             ).fetchone()
 
             if row and bcrypt.checkpw(password.encode("utf-8"), row[1]):
+                failed_login_attempts.pop(username, None)
                 token, expires_at = create_session(cursor, row[0])
                 sql_conn.commit()
 
@@ -153,6 +169,7 @@ class Connection():
                     "inventory": dict(inventory_rows)
                 })
             else:
+                attempts.append(now)
                 send_json(conn, {"type": "login", "message": "bad"})
         elif data_type == 'new':
             username = data.get('username')

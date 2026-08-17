@@ -24,7 +24,10 @@ def send_json(data):
     payload = json.dumps(data) + '\n'
     sock.sendall(payload.encode('utf-8'))
     print('sent: ')
-    print(data)
+    if 'password' in data:
+        print({**data, 'password':'[redacted]'})
+    else:
+        print(data)
 def recv_json():
     data = b""
     while True:
@@ -84,7 +87,7 @@ class LoginScreen(Screen):
             size_hint_y=None,
             height=40
         )
-        submit_button = Button(text='Submit',
+        submit_button = Button(text='Login',
                                height=40,
                                on_release=self.submit)
         create_button = Button(text='Create New User',
@@ -180,14 +183,19 @@ class Idleize(App):
     def on_server_message(self, data):
         data_type = data.get('type')
         message = data.get('message')
-        if data_type == 'login' and message == 'good':
-            self.session_token = data['session']
-            self.inventory = data.get('inventory', {})
-            #### populates ui after category_data is assigned ###
-            self.main.create_ui()
-            self.sm.current = 'main'
-            #### sets default starting tab ###
-            Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
+        if data_type == 'login':
+            if message == 'good':
+                self.session_token = data['session']
+                self.inventory = data.get('inventory', {})
+                #### populates ui after category_data is assigned ###
+                self.main.create_ui()
+                self.sm.current = 'main'
+                #### sets default starting tab ###
+                Clock.schedule_once(lambda dt: self.set_default_tab(), 0)
+            elif message == 'lockout':
+                print('Too many attempts. Locked out by server.')
+                self.show_popup('Too many attempts.','Locked out.')
+
         elif data_type == 'new':
             if message == 'username occupied':
                 print(f'username already taken')
