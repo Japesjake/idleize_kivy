@@ -112,7 +112,10 @@ class ResourceTab(Screen):
     def __init__(self,items,category_name,**kw):
         super().__init__(**kw)
         parent_layout = BoxLayout(orientation='vertical')
-        parent_layout.add_widget(Label(text=category_name.title(),size_hint_y=0.2))
+        self.category_name = category_name
+        experience = App.get_running_app().experience
+        self.header_label = Label(text=f"{category_name.title()} \n xp: {experience.get(category_name,0)}",size_hint_y=0.2)
+        parent_layout.add_widget(self.header_label)
         resources_layout = GridLayout(cols=2)
         self.item_buttons = {}
         for item in items:
@@ -150,10 +153,15 @@ class Main(Screen):
         self.add_widget(main_layout)
 
         App.get_running_app().bind(inventory=self.on_inventory_change)
+        App.get_running_app().bind(experience=self.on_experience_change)
     def on_inventory_change(self, app, inventory):
         for tab in self.tab_manager.screens:
             for item, btn in tab.item_buttons.items():
                 btn.text = f"{item.title()}: {inventory.get(item,0)}"
+    def on_experience_change(self, app, experience):
+        for tab in self.tab_manager.screens:
+            if tab.category_name in experience:
+                tab.header_label.text = f"{tab.category_name.title()} \n xp: {experience[tab.category_name]}"
     def switch_tab(self, tab_name):
         self.tab_manager.current = tab_name.lower()
 
@@ -162,6 +170,9 @@ class Idleize(App):
     session_token = None
     resource_categories = None
     inventory = DictProperty({})
+    ###### newly added #########
+    experience = DictProperty({})
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     def build(self):
@@ -187,6 +198,7 @@ class Idleize(App):
             if message == 'good':
                 self.session_token = data['session']
                 self.inventory = data.get('inventory', {})
+                self.experience = data.get('experience', {})
                 #### populates ui after category_data is assigned ###
                 self.main.create_ui()
                 self.sm.current = 'main'
@@ -212,8 +224,9 @@ class Idleize(App):
             if message == 'good':
                 with open("client_data.json", 'r') as f:
                     self.resource_categories = json.load(f).get('categories')
-        elif data_type == 'inventory update':
+        elif data_type == 'update':
             self.inventory[data.get('item')] = data.get('quantity')
+            self.experience[data.get('category')] = data.get('new_xp')
         print('received: ')
         print(data)
     def set_default_tab(self):

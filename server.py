@@ -161,16 +161,18 @@ class Connection():
                     "SELECT item_id, quantity FROM Inventory WHERE player_id = ?",
                     (row[0],)
                 ).fetchall()
-                #### add experience syncing here ###
-
-
-
+                experience_rows = cursor.execute(
+                    "SELECT Category.name, xp FROM PlayerExperience JOIN Category ON Category.category_id = PlayerExperience.category_id WHERE player_id = ?",
+                    (row[0],)
+                ).fetchall()
+                
                 send_json(conn, {
                     "type": "login",
                     "message": "good",
                     "session": token,
                     "expires_at": expires_at,
-                    "inventory": dict(inventory_rows)
+                    "inventory": dict(inventory_rows),
+                    "experience": dict(experience_rows)
                 })
             else:
                 attempts.append(now)
@@ -255,7 +257,7 @@ class IdleThread():
         self.addr = addr
         self.player_id = player_id
         self.item = item_id
-        self.category_name = category_id
+        self.category_id = category_id
         self.xp_reward = xp_reward
         self.idling = True
         self.thread = threading.Thread(target=self.idle_process)
@@ -287,17 +289,28 @@ class IdleThread():
                 ON CONFLICT (player_id, category_id)
                 DO UPDATE SET xp = xp + excluded.xp
                 """,
-                (self.player_id, self.category_name, self.xp_reward)
+                (self.player_id, self.category_id, self.xp_reward)
             )
             sql_conn.commit()
-            new_quantity = cursor.execute(
-                "SELECT quantity FROM Inventory WHERE player_id = ? AND item_id = ?",
-                (self.player_id, self.item),
-            ).fetchone()[0]
+            new_quantity = cursor.execute("""
+                SELECT quantity FROM Inventory 
+                WHERE player_id = ? AND item_id = ?
+                """,
+                (self.player_id, self.item)).fetchone()[0]
+            new_xp = cursor.execute("""
+                SELECT xp FROM PlayerExperience 
+                WHERE player_id = ? AND category_id = ?
+                """,
+                (self.player_id, self.category_id)).fetchone()[0]
+            category_name = cursor.execute("""
+                SELECT name FROM Category 
+                WHERE category_id = ?
+                """,
+                (self.category_id,)).fetchone()[0]
         finally:
             sql_conn.close()
         try:
-            send_json(self.conn, {'type':'inventory update', 'item': self.item, 'quantity':new_quantity})
+            send_json(self.conn, {'type':'update', 'item': self.item, 'quantity':new_quantity, 'category':category_name, 'new_xp': new_xp})
         except OSError:
             pass
 server = Server()
