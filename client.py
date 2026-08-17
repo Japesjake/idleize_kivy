@@ -118,13 +118,26 @@ class ResourceTab(Screen):
         parent_layout.add_widget(self.header_label)
         resources_layout = GridLayout(cols=2)
         self.item_buttons = {}
-        for item in items:
-            btn = Button(text=f"{item.title()}: {App.get_running_app().inventory.get(item, 0)}")
+        self.item_difficulty = {}
+        self.item_xp_reward = {}
+        for item, difficulty, xp_reward in items:
+            self.item_difficulty[item] = difficulty
+            self.item_xp_reward[item] = xp_reward
+            btn = Button(text=self.button_text(item))
             btn.bind(on_release=lambda x, current_item=item: send_json({'type': 'toggle idling','item':current_item}))
             resources_layout.add_widget(btn)
             self.item_buttons[item] = btn
         parent_layout.add_widget(resources_layout)
         self.add_widget(parent_layout)
+
+    def button_text(self, item):
+        app = App.get_running_app()
+        quantity = app.inventory.get(item, 0)
+        difficulty = self.item_difficulty.get(item, 0)
+        xp_reward = self.item_xp_reward.get(item, 0)
+        xp = app.experience.get(self.category_name, 0)
+        duration = max(1, difficulty - (xp / 100))
+        return f"{item.title()}: {quantity}\n\nDuration: {duration:.1f}s\nXP Reward: {xp_reward}"
 
 
 class Main(Screen):
@@ -157,11 +170,13 @@ class Main(Screen):
     def on_inventory_change(self, app, inventory):
         for tab in self.tab_manager.screens:
             for item, btn in tab.item_buttons.items():
-                btn.text = f"{item.title()}: {inventory.get(item,0)}"
+                btn.text = tab.button_text(item)
     def on_experience_change(self, app, experience):
         for tab in self.tab_manager.screens:
             if tab.category_name in experience:
                 tab.header_label.text = f"{tab.category_name.title()} \n xp: {experience[tab.category_name]}"
+            for item, btn in tab.item_buttons.items():
+                btn.text = tab.button_text(item)
     def switch_tab(self, tab_name):
         self.tab_manager.current = tab_name.lower()
 

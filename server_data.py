@@ -6,17 +6,17 @@ server_version = random.randint(5,1000)
 items = [
     ('copper ore','Copper Ore','mining', 1, 1,1),
     ('iron ore','Iron Ore','mining', 5, 2,2),
-    ('adamant ore', 'Adamant Ore','mining', 5, 2, 3),
+    ('adamant ore', 'Adamant Ore','mining', 20, 5, 3),
 
     ('copper ingot','Copper Ingot','smelting', 1, 1,1),
-    ('iron ingot', 'Iron Ingot','smelting',1,1,2),
+    ('iron ingot', 'Iron Ingot','smelting',5,1,2),
 
     ('carrot','Carrot','gathering', 1, 1,1),
     ('wood','Wood', 'gathering', 1, 1, 2),
     ('stick','Stick','gathering', 1, 1, 3),
     
     ('copper sword','Copper Sword','crafting',1,1,1),
-    ('iron sword', 'Iron Sword', 'crafting',1,1,2)
+    ('iron sword', 'Iron Sword', 'crafting',5,1,2)
 ]
 categories = [
     ('mining',1),

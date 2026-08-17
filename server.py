@@ -17,10 +17,23 @@ with open('create_db.sql', 'r') as f:
     create_db = f.read()
 cursor.executescript(create_db)
 
-sql = "INSERT OR IGNORE INTO Category (name, sort_order) VALUES (?, ?)"
+sql = """
+INSERT INTO Category (name, sort_order)
+VALUES (?, ?)
+ON CONFLICT(name) DO UPDATE SET sort_order = excluded.sort_order
+"""
 cursor.executemany(sql, categories)
 
-sql = "INSERT OR IGNORE INTO Item VALUES (?,?,(SELECT category_id FROM Category WHERE name = ?),?,?,?)"
+sql = """
+INSERT INTO Item (item_id, name, category_id, difficulty, xp_reward, sort_order)
+VALUES (?, ?, (SELECT category_id FROM Category WHERE name = ?), ?, ?, ?)
+ON CONFLICT(item_id) DO UPDATE SET
+    name = excluded.name,
+    category_id = excluded.category_id,
+    difficulty = excluded.difficulty,
+    xp_reward = excluded.xp_reward,
+    sort_order = excluded.sort_order
+"""
 cursor.executemany(sql, items)
 sql_conn.commit()
 sql_conn.close()
@@ -211,10 +224,16 @@ class Connection():
             
             ########
             item_id = data.get("item")
-            sql = """SELECT Category.category_id, Item.xp_reward FROM Category 
+            sql = """SELECT Category.category_id, Item.xp_reward, Item.difficulty FROM Category
             JOIN Item ON Category.category_id = Item.category_id
             WHERE item_id = ?"""
-            category_id, xp_reward = cursor.execute(sql,(item_id,)).fetchone()
+            category_id, xp_reward, difficulty = cursor.execute(sql,(item_id,)).fetchone()
+
+            xp_row = cursor.execute(
+                "SELECT xp FROM PlayerExperience WHERE player_id = ? AND category_id = ?",
+                (player_id, category_id),
+            ).fetchone()
+            current_xp = xp_row[0] if xp_row else 0
             ########
 
             matching_thread = None
@@ -228,7 +247,7 @@ class Connection():
                 IdleThread.idle_threads.remove(matching_thread)
                 print("Existing idle thread stopped.")
             else:
-                new_thread = IdleThread(conn, addr, player_id, item_id, category_id, xp_reward)
+                new_thread = IdleThread(conn, addr, player_id, item_id, category_id, xp_reward, difficulty, current_xp)
                 IdleThread.idle_threads.append(new_thread)
                 print(f"New idle thread started. Item_id = {item_id}")
 
@@ -237,7 +256,7 @@ class Connection():
         sql_conn.execute("PRAGMA journal_mode=WAL;")
         cursor = sql_conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
-        sql = "SELECT Category.name, json_group_array(Item.item_id ORDER BY Item.sort_order ASC) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name ORDER BY Category.sort_order ASC;"
+        sql = "SELECT Category.name, json_group_array(json_array(Item.item_id, Item.difficulty, Item.xp_reward) ORDER BY Item.sort_order ASC) FROM Item JOIN Category ON Item.category_id = Category.category_id GROUP BY Category.name ORDER BY Category.sort_order ASC;"
         cursor.execute(sql)
         category_data = cursor.fetchall()
         category_data = self.convert_items_from_json(category_data)
@@ -252,20 +271,23 @@ class Connection():
 
 class IdleThread():
     idle_threads = []
-    def __init__(self, conn, addr, player_id, item_id, category_id, xp_reward):
+    def __init__(self, conn, addr, player_id, item_id, category_id, xp_reward, difficulty, xp):
         self.conn = conn
         self.addr = addr
         self.player_id = player_id
         self.item = item_id
         self.category_id = category_id
         self.xp_reward = xp_reward
+        self.difficulty = difficulty
+        self.xp = xp
         self.idling = True
         self.thread = threading.Thread(target=self.idle_process)
         self.thread.start()
     def idle_process(self):
         self.idling = True
         while self.idling:
-            time.sleep(1)
+            duration = max(1, self.difficulty - (self.xp / 100))
+            time.sleep(duration)
             print('idling...')
             self.increment()
     def increment(self, amount_to_add=1):
@@ -298,10 +320,11 @@ class IdleThread():
                 """,
                 (self.player_id, self.item)).fetchone()[0]
             new_xp = cursor.execute("""
-                SELECT xp FROM PlayerExperience 
+                SELECT xp FROM PlayerExperience
                 WHERE player_id = ? AND category_id = ?
                 """,
                 (self.player_id, self.category_id)).fetchone()[0]
+            self.xp = new_xp
             category_name = cursor.execute("""
                 SELECT name FROM Category 
                 WHERE category_id = ?

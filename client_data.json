@@ -1,1 +1,1 @@
-{"version": 342, "categories": {"mining": ["copper ore", "iron ore", "adamant ore"], "smelting": ["copper ingot", "iron ingot"], "gathering": ["carrot", "wood", "stick"], "crafting": ["copper sword", "iron sword"]}, "inventory": {}}
+{"version": 532, "categories": {"mining": [["copper ore", 1, 1], ["iron ore", 5, 2], ["adamant ore", 20, 5]], "smelting": [["copper ingot", 1, 1], ["iron ingot", 5, 1]], "gathering": [["carrot", 1, 1], ["wood", 1, 1], ["stick", 1, 1]], "crafting": [["copper sword", 1, 1], ["iron sword", 5, 1]]}, "inventory": {}}
