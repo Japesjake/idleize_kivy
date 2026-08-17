@@ -37,3 +37,12 @@ CREATE TABLE IF NOT EXISTS Session (
     expires_at INTEGER NOT NULL,
     FOREIGN KEY (player_id) REFERENCES Player(player_id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS PlayerExperience (
+    player_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    xp INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (player_id,category_id),
+    FOREIGN KEY (player_id) REFERENCES Player(player_id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE
+);

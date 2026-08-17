@@ -178,8 +178,8 @@ class Idleize(App):
             version = data.get('version')
         send_json({'type':'version check','version': version})
         ### remove lines under here to deactivate automatic login ###
-        # time.sleep(0.1)
-        # send_json({'type': 'login', 'username': '', 'password': ''})
+        time.sleep(0.1)
+        send_json({'type': 'login', 'username': '', 'password': ''})
     def on_server_message(self, data):
         data_type = data.get('type')
         message = data.get('message')

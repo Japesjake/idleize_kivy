@@ -147,10 +147,11 @@ class Connection():
             ).fetchone()
 
             if row and bcrypt.checkpw(password.encode("utf-8"), row[1]):
+
                 failed_login_attempts.pop(username, None)
+                
                 token, expires_at = create_session(cursor, row[0])
                 sql_conn.commit()
-
                 for idle_thread in IdleThread.idle_threads:
                     if idle_thread.player_id == row[0]:
                         idle_thread.conn = conn
@@ -160,6 +161,9 @@ class Connection():
                     "SELECT item_id, quantity FROM Inventory WHERE player_id = ?",
                     (row[0],)
                 ).fetchall()
+                #### add experience syncing here ###
+
+
 
                 send_json(conn, {
                     "type": "login",
@@ -202,8 +206,14 @@ class Connection():
                     "message": "authentication required",
                 })
                 return
-
+            
+            ########
             item_id = data.get("item")
+            sql = """SELECT Category.category_id, Item.xp_reward FROM Category 
+            JOIN Item ON Category.category_id = Item.category_id
+            WHERE item_id = ?"""
+            category_id, xp_reward = cursor.execute(sql,(item_id,)).fetchone()
+            ########
 
             matching_thread = None
             for idle_thread in IdleThread.idle_threads:
@@ -216,9 +226,9 @@ class Connection():
                 IdleThread.idle_threads.remove(matching_thread)
                 print("Existing idle thread stopped.")
             else:
-                new_thread = IdleThread(conn, addr, player_id, item_id)
+                new_thread = IdleThread(conn, addr, player_id, item_id, category_id, xp_reward)
                 IdleThread.idle_threads.append(new_thread)
-                print("New idle thread started.")
+                print(f"New idle thread started. Item_id = {item_id}")
 
     def get_category_data(self):
         sql_conn = sqlite3.connect('data.db')
@@ -240,11 +250,13 @@ class Connection():
 
 class IdleThread():
     idle_threads = []
-    def __init__(self, conn, addr, player_id, item_id):
+    def __init__(self, conn, addr, player_id, item_id, category_id, xp_reward):
         self.conn = conn
         self.addr = addr
         self.player_id = player_id
         self.item = item_id
+        self.category_name = category_id
+        self.xp_reward = xp_reward
         self.idling = True
         self.thread = threading.Thread(target=self.idle_process)
         self.thread.start()
@@ -268,6 +280,14 @@ class IdleThread():
                 DO UPDATE SET quantity = quantity + excluded.quantity
                 """,
                 (self.player_id, self.item, amount_to_add),
+            )
+            cursor.execute(
+                """INSERT INTO PlayerExperience (player_id, category_id, xp)
+                VALUES (?, ?, ?)
+                ON CONFLICT (player_id, category_id)
+                DO UPDATE SET xp = xp + excluded.xp
+                """,
+                (self.player_id, self.category_name, self.xp_reward)
             )
             sql_conn.commit()
             new_quantity = cursor.execute(
